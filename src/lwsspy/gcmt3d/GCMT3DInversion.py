@@ -31,7 +31,7 @@ from .process_classifier import ProcessParams
 from .measurements import get_all_measurements
 import logging
 
-lpy.updaterc(rebuild=False)
+lpy.plot.updaterc(rebuild=False)
 
 
 # Main parameters
@@ -52,7 +52,7 @@ datadir = os.path.join(invdir, "Data")
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 
 # %% Get Model CMT
-processdict = lpy.read_yaml_file(os.path.join(scriptdir, "process.yml"))
+processdict = lpy.utils.read_yaml_file(os.path.join(scriptdir, "process.yml"))
 
 
 download_dict = dict(
@@ -109,8 +109,8 @@ class GCMT3DInversion:
             normalize: bool = True,
             overwrite: bool = False,
             launch_method: str = "srun -n6 --gpus-per-task=1",
-            process_func: Callable = lpy.process_stream,
-            window_func: Callable = lpy.window_on_stream,
+            process_func: Callable = lpy.seismo.process_stream,
+            window_func: Callable = lpy.seismo.window_on_stream,
             multiprocesses: int = 20,
             loglevel: int = logging.DEBUG,
             log2stdout: bool = True,
@@ -119,7 +119,8 @@ class GCMT3DInversion:
             no_init: bool = False):
 
         # CMTSource
-        self.cmtsource = lpy.CMTSource.from_CMTSOLUTION_file(cmtsolutionfile)
+        self.cmtsource = lpy.seismo.CMTSource.from_CMTSOLUTION_file(
+            cmtsolutionfile)
         self.cmt_out = deepcopy(self.cmtsource)
         self.xml_event = read_events(cmtsolutionfile)[0]
 
@@ -233,7 +234,7 @@ class GCMT3DInversion:
         self.logger.propagate = False
 
         # create formatter
-        formatter = lpy.CustomFormatter()
+        formatter = lpy.utils.CustomFormatter()
 
         # Add file logger if necessary
         if self.log2file:
@@ -253,14 +254,14 @@ class GCMT3DInversion:
         self.logger.handler_set = True
 
         # Starting the log
-        lpy.log_bar(
+        lpy.utils.log_bar(
             f"GCMT3D LOG: {self.cmtsource.eventname}",
             plogger=self.logger.info)
 
     def adapt_processdict(self):
 
         # Logging
-        lpy.log_action(
+        lpy.utils.log_action(
             "Adapting processing dictionary", plogger=self.logger.debug)
 
         # Get Process parameters
@@ -305,9 +306,9 @@ class GCMT3DInversion:
             self.processdict.pop(_key, None)
 
         # Dump the processing file in the cmt directory
-        lpy.log_action(
+        lpy.utils.log_action(
             "Writing it to file", plogger=self.logger.debug)
-        lpy.write_yaml_file(
+        lpy.utils.write_yaml_file(
             self.processdict, os.path.join(self.cmtdir, "process.yml"))
 
     def init(self):
@@ -317,7 +318,7 @@ class GCMT3DInversion:
 
         # Set up the Logger, so that progress is monitored
         self.__setup_logger__()
-        lpy.log_section(
+        lpy.utils.log_section(
             "Setting up the directories and Waveform dicts",
             plogger=self.logger.info)
 
@@ -330,7 +331,7 @@ class GCMT3DInversion:
 
         # Get observed data and process data
         if self.download_data:
-            with lpy.Timer(plogger=self.logger.info):
+            with lpy.utils.Timer(plogger=self.logger.info):
                 self.__download_data__()
 
         # Initialize model vector
@@ -362,7 +363,8 @@ class GCMT3DInversion:
         if os.path.exists(self.cmt_in_db) is False:
             self.cmtsource.write_CMTSOLUTION_file(self.cmt_in_db)
         else:
-            check_cmt = lpy.CMTSource.from_CMTSOLUTION_file(self.cmt_in_db)
+            check_cmt = lpy.seismo.CMTSource.from_CMTSOLUTION_file(
+                self.cmt_in_db)
             if check_cmt != self.cmtsource:
                 raise ValueError('Already have a CMTSOLUTION, '
                                  'but it is different from the input one.')
@@ -427,7 +429,7 @@ class GCMT3DInversion:
         self.pars = [_par for _par in self.pardict.keys()]
 
         # Create scaling vector
-        self.scale = np.array([10**lpy.magnitude(getattr(self.cmtsource, _par))
+        self.scale = np.array([10**lpy.math.magnitude(getattr(self.cmtsource, _par))
                                if _par not in mt_params else _dict['scale']
                                for _par, _dict in self.pardict.items()])
 
@@ -445,23 +447,23 @@ class GCMT3DInversion:
                 self.synt_dict[_wtype][_par] = Stream()
 
     def process_data(self):
-        lpy.log_section(
+        lpy.utils.log_section(
             "Loading and processing the data",
             plogger=self.logger.info)
 
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__load_data__()
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__process_data__()
 
     def process_synt(self):
-        lpy.log_section(
+        lpy.utils.log_section(
             "Loading and processing the modeled data",
             plogger=self.logger.info)
 
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__load_synt__()
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__process_synt__()
 
     def get_windows(self):
@@ -470,7 +472,7 @@ class GCMT3DInversion:
         self.__write_sources__()
 
         # Run first set of simulations
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__run_simulations__()
         self.process_all_synt()
 
@@ -478,11 +480,11 @@ class GCMT3DInversion:
         self.copy_init_synt()
 
         # Window the data
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__window__()
 
         # Prep next set of simulations
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__prep_simulations__()
 
         self.not_windowed_yet = False
@@ -494,7 +496,7 @@ class GCMT3DInversion:
     def __compute_weights__(self):
 
         # Computing the weights
-        lpy.log_bar("Computing Weights", plogger=self.logger.info)
+        lpy.utils.log_bar("Computing Weights", plogger=self.logger.info)
 
         # Weight dictionary
         self.weights = dict()
@@ -619,16 +621,16 @@ class GCMT3DInversion:
     def process_all_synt(self):
 
         # Logging
-        lpy.log_section(
+        lpy.utils.log_section(
             "Loading and processing all modeled data",
             plogger=self.logger.info)
 
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__load_synt__()
             self.__load_synt_par__()
             # self.__remove_zero_windows_on_synt__()
 
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__process_synt__()
             self.__process_synt_par__()
 
@@ -650,7 +652,7 @@ class GCMT3DInversion:
         endtime = self.cmtsource.cmt_time + self.duration \
             + self.endtime_offset
 
-        lpy.log_bar("Data Download", plogger=self.logger.info)
+        lpy.utils.log_bar("Data Download", plogger=self.logger.info)
 
         if self.node_login is None:
             lpy.download_waveforms_to_storage(
@@ -675,7 +677,7 @@ class GCMT3DInversion:
             {download_cmd}
             """
 
-            lpy.log_action(
+            lpy.utils.log_action(
                 f"Logging into {' '.join(login_cmd)} and downloading",
                 plogger=self.logger.info)
             self.logger.debug(f"Command: \n{comcmd}\n")
@@ -692,10 +694,10 @@ class GCMT3DInversion:
                 raise ValueError("Download not successful.")
 
     def __load_data__(self):
-        lpy.log_action("Loading the data", plogger=self.logger.info)
+        lpy.utils.log_action("Loading the data", plogger=self.logger.info)
 
         # Load Station data
-        self.stations = lpy.read_inventory(
+        self.stations = lpy.seismo.read_inventory(
             os.path.join(self.stationdir, "*.xml"))
 
         # Load seismic data
@@ -709,7 +711,7 @@ class GCMT3DInversion:
 
         # Process each wavetype.
         for _wtype, _stream in self.data_dict.items():
-            lpy.log_action(
+            lpy.utils.log_action(
                 f"Processing data for {_wtype}",
                 plogger=self.logger.info)
 
@@ -738,7 +740,7 @@ class GCMT3DInversion:
                 self.data_dict[_wtype] = self.process_func(
                     _stream, **processdict)
             else:
-                lpy.log_action(
+                lpy.utils.log_action(
                     f"Processing in parallel using {self.multiprocesses} cores",
                     plogger=self.logger.debug)
                 # self.data_dict[_wtype] = lpy.multiprocess_stream(
@@ -750,7 +752,8 @@ class GCMT3DInversion:
 
         # if self.specfemdir is not None:
         # Load forward data
-        lpy.log_action("Loading forward synthetics", plogger=self.logger.info)
+        lpy.utils.log_action("Loading forward synthetics",
+                             plogger=self.logger.info)
         temp_synt = read(os.path.join(
             self.synt_syntdir, "OUTPUT_FILES", "*.sac"))
 
@@ -759,10 +762,10 @@ class GCMT3DInversion:
 
     def __load_synt_par__(self):
         # Load frechet data
-        lpy.log_action("Loading parameter synthetics",
-                       plogger=self.logger.info)
+        lpy.utils.log_action("Loading parameter synthetics",
+                             plogger=self.logger.info)
         for _par, _pardirs in self.synt_pardirs.items():
-            lpy.log_action(f"    {_par}", plogger=self.logger.info)
+            lpy.utils.log_action(f"    {_par}", plogger=self.logger.info)
 
             if _par in self.nosimpars:
                 temp_synt = read(os.path.join(
@@ -783,7 +786,7 @@ class GCMT3DInversion:
         if self.multiprocesses > 1:
             parallel = True
             # p = mpp.Pool(processes=self.multiprocesses)
-            lpy.log_action(
+            lpy.utils.log_action(
                 f"Processing in parallel using {self.multiprocesses} cores",
                 plogger=self.logger.debug)
         else:
@@ -809,7 +812,7 @@ class GCMT3DInversion:
                 event_latitude=self.cmtsource.latitude,
                 event_longitude=self.cmtsource.longitude)
             )
-            lpy.log_action(
+            lpy.utils.log_action(
                 f"Processing {_wtype}/synt: "
                 f"{len(self.synt_dict[_wtype]['synt'])} waveforms",
                 plogger=self.logger.info)
@@ -834,7 +837,7 @@ class GCMT3DInversion:
         if self.multiprocesses > 1:
             parallel = True
             # p = mpp.Pool(processes=self.multiprocesses)
-            lpy.log_action(
+            lpy.utils.log_action(
                 f"Processing in parallel using {self.multiprocesses} cores",
                 plogger=self.logger.debug)
         else:
@@ -863,7 +866,7 @@ class GCMT3DInversion:
 
             # Process each wavetype.
             for _par, _parsubdict in self.pardict.items():
-                lpy.log_action(
+                lpy.utils.log_action(
                     f"Processing {_wtype}/{_par}: "
                     f"{len(self.synt_dict[_wtype][_par])} waveforms",
                     plogger=self.logger.info)
@@ -915,7 +918,8 @@ class GCMT3DInversion:
         debug = True if self.loglevel >= 20 else False
 
         for _wtype in self.processdict.keys():
-            lpy.log_action(f"Windowing {_wtype}", plogger=self.logger.info)
+            lpy.utils.log_action(
+                f"Windowing {_wtype}", plogger=self.logger.info)
 
             for window_dict in self.processdict[_wtype]["window"]:
 
@@ -944,7 +948,7 @@ class GCMT3DInversion:
                     #     wrapwindowdict, nprocs=self.multiprocesses)
 
             if len(self.processdict[_wtype]["window"]) > 1:
-                lpy.log_action(
+                lpy.utils.log_action(
                     f"Merging {_wtype}windows", plogger=self.logger.info)
                 self.merge_windows(
                     self.data_dict[_wtype],
@@ -992,7 +996,7 @@ class GCMT3DInversion:
 
     def __prep_simulations__(self):
 
-        lpy.log_action("Prepping simulations", plogger=self.logger.info)
+        lpy.utils.log_action("Prepping simulations", plogger=self.logger.info)
         # Create forward directory
         if self.specfemdir is not None:
             lpy.createsimdir(self.specfemdir, self.synt_syntdir,
@@ -1015,14 +1019,14 @@ class GCMT3DInversion:
 
         # Update Par_file depending on the parameter.
         syn_parfile = os.path.join(self.synt_syntdir, "DATA", "Par_file")
-        syn_pars = lpy.read_parfile(syn_parfile)
+        syn_pars = lpy.seismo.read_parfile(syn_parfile)
         syn_pars["USE_SOURCE_DERIVATIVE"] = False
 
         # Adapt duration
         syn_pars["RECORD_LENGTH_IN_MINUTES"] = self.simulation_duration
 
         # Write Stuff to Par_file
-        lpy.write_parfile(syn_pars, syn_parfile)
+        lpy.seismo.write_parfile(syn_pars, syn_parfile)
 
         # Do the same for the parameters to invert for.
         for _par, _pardir in self.synt_pardirs.items():
@@ -1036,7 +1040,7 @@ class GCMT3DInversion:
 
                 # Update Par_file depending on the parameter.
                 dsyn_parfile = os.path.join(_pardir, "DATA", "Par_file")
-                dsyn_pars = lpy.read_parfile(dsyn_parfile)
+                dsyn_pars = lpy.seismo.read_parfile(dsyn_parfile)
 
                 # Set data parameters and  write new parfiles
                 locations = ["latitude", "longitude", "depth_in_m"]
@@ -1058,7 +1062,7 @@ class GCMT3DInversion:
                 dsyn_pars["RECORD_LENGTH_IN_MINUTES"] = self.simulation_duration
 
                 # Write Stuff to Par_file
-                lpy.write_parfile(dsyn_pars, dsyn_parfile)
+                lpy.seismo.write_parfile(dsyn_pars, dsyn_parfile)
 
     def __update_cmt__(self, model):
         cmt = deepcopy(self.cmtsource)
@@ -1074,8 +1078,8 @@ class GCMT3DInversion:
             setattr(cmt, _par, _modelval)
 
         # Writing synthetic CMT solution
-        lpy.log_action("Writing Synthetic CMTSOLUTION",
-                       plogger=self.logger.info)
+        lpy.utils.log_action("Writing Synthetic CMTSOLUTION",
+                             plogger=self.logger.info)
         cmt.write_CMTSOLUTION_file(os.path.join(
             self.synt_syntdir, "DATA", "CMTSOLUTION"))
 
@@ -1084,7 +1088,7 @@ class GCMT3DInversion:
 
             if _par not in ["time_shift", "half_duration"]:
                 # Write source to the directory of simulation
-                lpy.log_action(
+                lpy.utils.log_action(
                     f"Writing Frechet CMTSOLUTION for {_par}",
                     plogger=self.logger.info)
 
@@ -1121,7 +1125,8 @@ class GCMT3DInversion:
 
     def __run_simulations__(self):
 
-        lpy.log_action("Submitting all simulations", plogger=self.logger.info)
+        lpy.utils.log_action("Submitting all simulations",
+                             plogger=self.logger.info)
         # Initialize necessary commands
         cmd_list = self.nsim * [f'{self.launch_method} ./bin/xspecfem3D']
 
@@ -1129,21 +1134,21 @@ class GCMT3DInversion:
         cwdlist.extend(
             [_pardir for _par, _pardir in self.synt_pardirs.items()
              if _par not in self.nosimpars])
-        asyncio.run(lpy.asyncio_commands(cmd_list, cwdlist=cwdlist))
+        asyncio.run(lpy.shell.asyncio_commands(cmd_list, cwdlist=cwdlist))
 
     def __run_forward_only__(self):
 
         # Initialize necessary commands
-        lpy.log_action(
+        lpy.utils.log_action(
             "Submitting forward simulation", plogger=self.logger.info)
         cmd_list = [f'{self.launch_method} ./bin/xspecfem3D']
         cwdlist = [self.synt_syntdir]
-        asyncio.run(lpy.asyncio_commands(cmd_list, cwdlist=cwdlist))
+        asyncio.run(lpy.shell.asyncio_commands(cmd_list, cwdlist=cwdlist))
 
     def __run_parameters_only__(self):
 
         # Initialize necessary commands
-        lpy.log_action(
+        lpy.utils.log_action(
             "Submitting parameter simulations", plogger=self.logger.info)
         cmd_list = (self.nsim - 1) * [f'{self.launch_method} ./bin/xspecfem3D']
 
@@ -1151,7 +1156,7 @@ class GCMT3DInversion:
         cwdlist.extend(
             [_pardir for _par, _pardir in self.synt_pardirs.items()
              if _par not in self.nosimpars])
-        asyncio.run(lpy.asyncio_commands(cmd_list, cwdlist=cwdlist))
+        asyncio.run(lpy.shell.asyncio_commands(cmd_list, cwdlist=cwdlist))
 
     def forward(self, model):
         # Update model
@@ -1181,7 +1186,7 @@ class GCMT3DInversion:
         self.__write_sources__()
 
         # Run the simulations
-        with lpy.Timer(plogger=self.logger.info):
+        with lpy.utils.Timer(plogger=self.logger.info):
             self.__run_simulations__()
 
         # Get streams
@@ -1221,7 +1226,7 @@ class GCMT3DInversion:
         if self.iteration == 0:
             pass
         else:
-            with lpy.Timer(plogger=self.logger.info):
+            with lpy.utils.Timer(plogger=self.logger.info):
                 self.__run_simulations__()
 
             # Get streams
@@ -1364,7 +1369,7 @@ class GCMT3DInversion:
         cost = 0
         for _wtype in self.processdict.keys():
 
-            cgh = lpy.CostGradHess(
+            cgh = lpy.seismo.CostGradHess(
                 data=self.data_dict[_wtype],
                 synt=self.synt_dict[_wtype]["synt"],
                 verbose=True if self.loglevel >= 20 else False,
@@ -1378,7 +1383,7 @@ class GCMT3DInversion:
         residuals = dict()
         for _wtype in self.processdict.keys():
 
-            cgh = lpy.CostGradHess(
+            cgh = lpy.seismo.CostGradHess(
                 data=self.data_dict[_wtype],
                 synt=self.synt_dict[_wtype]["synt"],
                 verbose=True if self.loglevel >= 20 else False,
@@ -1402,7 +1407,7 @@ class GCMT3DInversion:
                 dsyn.append(self.synt_dict[_wtype][_par])
 
             # Create costgradhess class to computte gradient
-            cgh = lpy.CostGradHess(
+            cgh = lpy.seismo.CostGradHess(
                 data=self.data_dict[_wtype],
                 synt=self.synt_dict[_wtype]["synt"],
                 dsyn=dsyn,
@@ -1427,7 +1432,7 @@ class GCMT3DInversion:
                 dsyn.append(self.synt_dict[_wtype][_par])
 
             # Create costgradhess class to computte gradient
-            cgh = lpy.CostGradHess(
+            cgh = lpy.seismo.CostGradHess(
                 data=self.data_dict[_wtype],
                 synt=self.synt_dict[_wtype]["synt"],
                 dsyn=dsyn,
@@ -1451,7 +1456,7 @@ class GCMT3DInversion:
         cost = 0
         for _wtype in self.processdict.keys():
 
-            cgh = lpy.CostGradHessLogEnergy(
+            cgh = lpy.seismo.CostGradHessLogEnergy(
                 data=self.data_dict[_wtype],
                 synt=self.synt_dict[_wtype]["synt"],
                 verbose=True if self.loglevel >= 20 else False,
@@ -1472,7 +1477,7 @@ class GCMT3DInversion:
                 dsyn.append(self.synt_dict[_wtype][_par])
 
             # Create costgradhess class to computte gradient
-            cgh = lpy.CostGradHessLogEnergy(
+            cgh = lpy.seismo.CostGradHessLogEnergy(
                 data=self.data_dict[_wtype],
                 synt=self.synt_dict[_wtype]["synt"],
                 dsyn=dsyn,
@@ -1493,7 +1498,7 @@ class GCMT3DInversion:
     def misfit_walk_depth(self):
 
         # Start the walk
-        lpy.log_bar("Misfit walk: Depth", plogger=self.logger.info)
+        lpy.utils.log_bar("Misfit walk: Depth", plogger=self.logger.info)
 
         scaled_depths = np.arange(
             self.cmtsource.depth_in_m - 10000,
@@ -1505,14 +1510,14 @@ class GCMT3DInversion:
 
         for _i, _dep in enumerate(scaled_depths):
 
-            lpy.log_section(
+            lpy.utils.log_section(
                 f"Computing CgH for: {_dep} km",
                 plogger=self.logger.info)
 
-            with lpy.Timer(plogger=self.logger.info):
+            with lpy.utils.Timer(plogger=self.logger.info):
                 c, g, h = self.compute_cost_gradient_hessian(
                     np.array([_dep]))
-                lpy.log_action(
+                lpy.utils.log_action(
                     f"\n     Iteration for {_dep} km done.",
                     plogger=self.logger.info)
             cost[_i] = c
@@ -1554,7 +1559,7 @@ class GCMT3DInversion:
         plt.savefig(self.cmtdir + "/misfit_walk_depth.pdf")
 
         # Start the walk
-        lpy.log_bar("DONE.", plogger=self.logger.info)
+        lpy.utils.log_bar("DONE.", plogger=self.logger.info)
 
     def misfit_walk_depth_times(self):
         """Pardict containing an array of the walk parameters.
@@ -1602,7 +1607,7 @@ class GCMT3DInversion:
         # Cost
         ax1 = plt.subplot(3, 4, 9)
         plt.imshow(cost, interpolation=None, extent=extent, aspect=aspect)
-        lpy.plot_label(ax1, r"$\mathcal{C}$", dist=0)
+        lpy.plot.plot_label(ax1, r"$\mathcal{C}$", dist=0)
         plt.plot(times[ind[0]], depths[ind[1]], "*")
         c1 = plt.colorbar()
         c1.ax.tick_params(labelsize=7)
@@ -1619,7 +1624,7 @@ class GCMT3DInversion:
         c2.ax.tick_params(labelsize=7)
         c2.ax.yaxis.offsetText.set_fontsize(7)
         ax2.tick_params(labelbottom=False)
-        lpy.plot_label(ax2, r"$g_{\Delta t}$", dist=0)
+        lpy.plot.plot_label(ax2, r"$g_{\Delta t}$", dist=0)
 
         ax3 = plt.subplot(3, 4, 10, sharey=ax1)
         plt.imshow(grad[:, :, 0], interpolation=None,
@@ -1628,7 +1633,7 @@ class GCMT3DInversion:
         c3.ax.tick_params(labelsize=7)
         c3.ax.yaxis.offsetText.set_fontsize(7)
         ax3.tick_params(labelleft=False)
-        lpy.plot_label(ax3, r"$g_z$", dist=0)
+        lpy.plot.plot_label(ax3, r"$g_z$", dist=0)
         plt.xlabel(r'$\Delta t$')
 
         # Hessian
@@ -1639,7 +1644,7 @@ class GCMT3DInversion:
         c4.ax.tick_params(labelsize=7)
         c4.ax.yaxis.offsetText.set_fontsize(7)
         ax4.tick_params(labelbottom=False)
-        lpy.plot_label(ax4, r"$\mathcal{H}_{z,\Delta t}$", dist=0)
+        lpy.plot.plot_label(ax4, r"$\mathcal{H}_{z,\Delta t}$", dist=0)
 
         ax5 = plt.subplot(3, 4, 7, sharey=ax1)
         plt.imshow(hess[:, :, 1, 1], interpolation=None,
@@ -1648,7 +1653,7 @@ class GCMT3DInversion:
         c5.ax.tick_params(labelsize=7)
         c5.ax.yaxis.offsetText.set_fontsize(7)
         ax5.tick_params(labelleft=False, labelbottom=False)
-        lpy.plot_label(ax5, r"$\mathcal{H}_{\Delta t,\Delta t}$", dist=0)
+        lpy.plot.plot_label(ax5, r"$\mathcal{H}_{\Delta t,\Delta t}$", dist=0)
 
         ax6 = plt.subplot(3, 4, 11, sharey=ax1)
         plt.imshow(hess[:, :, 0, 0], interpolation=None,
@@ -1657,7 +1662,7 @@ class GCMT3DInversion:
         c6.ax.tick_params(labelsize=7)
         c6.ax.yaxis.offsetText.set_fontsize(7)
         ax6.tick_params(labelleft=False)
-        lpy.plot_label(ax6, r"$\mathcal{H}_{z,z}$", dist=0)
+        lpy.plot.plot_label(ax6, r"$\mathcal{H}_{z,z}$", dist=0)
         plt.xlabel(r'$\Delta t$')
 
         # Gradient/Hessian
@@ -1668,7 +1673,7 @@ class GCMT3DInversion:
         c7.ax.tick_params(labelsize=7)
         c7.ax.yaxis.offsetText.set_fontsize(7)
         ax7.tick_params(labelleft=False, labelbottom=False)
-        lpy.plot_label(ax7, r"$\mathrm{d}\Delta$", dist=0)
+        lpy.plot.plot_label(ax7, r"$\mathrm{d}\Delta$", dist=0)
 
         ax8 = plt.subplot(3, 4, 12, sharey=ax1)
         plt.imshow(dm[:, :, 0], interpolation=None,
@@ -1677,7 +1682,7 @@ class GCMT3DInversion:
         c8.ax.tick_params(labelsize=7)
         c8.ax.yaxis.offsetText.set_fontsize(7)
         ax8.tick_params(labelleft=False)
-        lpy.plot_label(ax8, r"$\mathrm{d}z$", dist=0)
+        lpy.plot.plot_label(ax8, r"$\mathrm{d}z$", dist=0)
         plt.xlabel(r'$\Delta t$')
 
         plt.subplots_adjust(hspace=0.2, wspace=0.15)
@@ -1983,24 +1988,24 @@ def plot_seismograms(obsd: Trace, synt: Union[Trace, None] = None,
         label = f"{trace_id}\n{tag.capitalize()}"
     else:
         label = f"{trace_id}"
-    lpy.plot_label(ax1, label, location=1, dist=0.005, box=False)
+    lpy.plot.plot_label(ax1, label, location=1, dist=0.005, box=False)
 
     # plot envelope
     ax2 = plt.subplot(212)
-    obsenv = lpy.envelope(obsd.data)
+    obsenv = lpy.math.envelope(obsd.data)
     ax2.plot(times, obsenv, color="black",
              linewidth=1.0, label="Obs")
     if isinstance(synt, Trace):
-        ax2.plot(times, lpy.envelope(synt.data), color="red", linewidth=1,
+        ax2.plot(times, lpy.math.envelope(synt.data), color="red", linewidth=1,
                  label="Syn")
     if isinstance(syntf, Trace):
-        ax2.plot(times, lpy.envelope(syntf.data), color="blue", linewidth=1,
+        ax2.plot(times, lpy.math.envelope(syntf.data), color="blue", linewidth=1,
                  label="New Syn")
     envscaleabsmax = 1.25*np.max(np.abs(obsenv))
     ax2.set_xlim(times[0], times[-1])
     ax2.set_ylim(0, envscaleabsmax)
     ax2.set_xlabel("Time [s]", fontsize=13)
-    lpy.plot_label(ax2, "Envelope", location=1, dist=0.005, box=False)
+    lpy.plot.plot_label(ax2, "Envelope", location=1, dist=0.005, box=False)
     if isinstance(synt, Trace):
         try:
             for win in obsd.stats.windows:
@@ -2042,16 +2047,17 @@ def bin():
 
     # Get Input parameters
     if inputfile is None:
-        inputdict = lpy.read_yaml_file(os.path.join(scriptdir, "input.yml"))
+        inputdict = lpy.utils.read_yaml_file(
+            os.path.join(scriptdir, "input.yml"))
     else:
-        inputdict = lpy.read_yaml_file(inputfile)
+        inputdict = lpy.utils.read_yaml_file(inputfile)
 
     # Get process params
     if inputdict["processparams"] is None:
-        processdict = lpy.read_yaml_file(
+        processdict = lpy.utils.read_yaml_file(
             os.path.join(scriptdir, "process.yml"))
     else:
-        processdict = lpy.read_yaml_file(inputdict["processparams"])
+        processdict = lpy.utils.read_yaml_file(inputdict["processparams"])
 
     # Set params
     pardict = inputdict["parameters"]
@@ -2071,7 +2077,7 @@ def bin():
         download_data = True
     else:
         # Set CPU Affinity
-        lpy.reset_cpu_affinity(verbose=True)
+        lpy.utils.reset_cpu_affinity(verbose=True)
 
     # Setup the download
     gcmt3d = GCMT3DInversion(
@@ -2100,11 +2106,11 @@ def bin():
 
     optim_list = []
 
-    with lpy.Timer(plogger=gcmt3d.logger.info):
+    with lpy.utils.Timer(plogger=gcmt3d.logger.info):
 
         # Gauss Newton Optimization Structure
-        lpy.log_bar("GN", plogger=gcmt3d.logger.info)
-        optim_gn = lpy.Optimization("gn")
+        lpy.utils.log_bar("GN", plogger=gcmt3d.logger.info)
+        optim_gn = lpy.inversion.Optimization("gn")
         optim_gn.logger = gcmt3d.logger.info
         optim_gn.compute_cost_and_grad_and_hess = gcmt3d.compute_cost_gradient_hessian
 
@@ -2113,10 +2119,10 @@ def bin():
             setattr(optim_gn, key, val)
 
         # Run optimization
-        with lpy.Timer(plogger=gcmt3d.logger.info):
+        with lpy.utils.Timer(plogger=gcmt3d.logger.info):
             optim_out = gcmt3d.optimize(optim_gn)
-            lpy.log_action("DONE with Gauss-Newton.",
-                           plogger=gcmt3d.logger.info)
+            lpy.utils.log_action("DONE with Gauss-Newton.",
+                                 plogger=gcmt3d.logger.info)
 
         gcmt3d.logger.info("Shape:")
         gcmt3d.logger.info(optim_out.model.shape)
@@ -2203,7 +2209,7 @@ def bin():
     #     optim_list,
     #     list(pardict.keys()),  # "BFGS-R" "BFGS",
     #     outfile=f"{gcmt3d.cmtdir}/InversionHistory.pdf")
-    lpy.plot_optimization(
+    lpy.inversion.plot_optimization(
         optim_list,
         outfile=f"{gcmt3d.cmtdir}/misfit_reduction_history.pdf")
 
@@ -2243,16 +2249,17 @@ def bin_process_final():
 
     # Get Input parameters
     if inputfile is None:
-        inputdict = lpy.read_yaml_file(os.path.join(scriptdir, "input.yml"))
+        inputdict = lpy.utils.read_yaml_file(
+            os.path.join(scriptdir, "input.yml"))
     else:
-        inputdict = lpy.read_yaml_file(inputfile)
+        inputdict = lpy.utils.read_yaml_file(inputfile)
 
     # Get process params
     if inputdict["processparams"] is None:
-        processdict = lpy.read_yaml_file(
+        processdict = lpy.utils.read_yaml_file(
             os.path.join(scriptdir, "process.yml"))
     else:
-        processdict = lpy.read_yaml_file(inputdict["processparams"])
+        processdict = lpy.utils.read_yaml_file(inputdict["processparams"])
 
     # Set params
     pardict = inputdict["parameters"]
@@ -2295,7 +2302,7 @@ def bin_process_final():
     gcmt3d.copy_init_synt()
 
     # Window the data
-    with lpy.Timer(plogger=gcmt3d.logger.info):
+    with lpy.utils.Timer(plogger=gcmt3d.logger.info):
         gcmt3d.__window__()
         gcmt3d.__compute_weights__()
 
