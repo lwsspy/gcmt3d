@@ -1,3 +1,4 @@
+# External
 import _pickle as cPickle
 import matplotlib
 from matplotlib.lines import Line2D
@@ -9,11 +10,13 @@ from copy import deepcopy
 from glob import glob
 from typing import Optional
 import os
-import lwsspy as lpy
-from ...plot.pick_colors_from_cmap import pick_colors_from_cmap
-from ...plotl import plot_label
-from ...plotterc import updaterc
-from ...constants import abc
+# Internal
+from .. import plot as lplt
+from .. import base as lbase
+from .. import seismo as lseis
+from .. import math as lmat
+
+lplt.updaterc()
 
 
 def get_bins(b, a, nbin, mtype):
@@ -169,12 +172,12 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
                 label += f"{alabel:<{mlabel}}: {np.mean(a):5.2f}±{np.std(a):4.2f}"
             else:
                 label = f"{blabel}: {np.mean(b):5.2f}±{np.std(b):4.2f}"
-            plot_label(ax, label, location=2, box=False, fontfamily="monospace",
-                       fontsize="x-small", dist=0.025)
-            plot_label(ax, f"N: {len(b)}", location=7, box=False,
-                           fontsize="small", dist=0.025)
-            plot_label(ax, abc[counter], location=6, box=False,
-                       fontsize="small", dist=0.025)
+            lplt.plot_label(ax, label, location=2, box=False, fontfamily="monospace",
+                            fontsize="x-small", dist=0.025)
+            lplt.plot_label(ax, f"N: {len(b)}", location=7, box=False,
+                            fontsize="small", dist=0.025)
+            lplt.plot_label(ax, lbase.abc[counter], location=6, box=False,
+                            fontsize="small", dist=0.025)
             if no_after is False:
                 ax.set_ylim((0, 1.5*np.max([np.max(nb), np.max(na)])))
             else:
@@ -194,7 +197,7 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
                 #            ncol=ncol, borderaxespad=0.0, borderpad=0.5,
                 #            handletextpad=0.15, labelspacing=0.0,
                 #            handlelength=1.0, columnspacing=1.0)
-            # lpy.plot_label(ax, lpy.abc[counter] + ")", location=6, box=False,
+            # lplt.plot_label(ax, lbase.abc[counter] + ")", location=6, box=False,
             #                fontsize="small")
 
             # if _wtype == "body" and _comp == "Z":
@@ -244,11 +247,11 @@ def plot_window_histograms(xbins, ybins, hists: dict):
                 label="Counts"),
             dlna=dict(
                 cmap="seismic",
-                norm=lpy.MidpointNormalize(midpoint=0.0),
+                norm=lplt.MidpointNormalize(midpoint=0.0),
                 label="dlnA"),
             time_shift=dict(
                 cmap="seismic",
-                norm=lpy.MidpointNormalize(
+                norm=lplt.MidpointNormalize(
                     vmin=-12.5, vmax=12.5, midpoint=0.0),
                 label="CC-$\\Delta$ t"),
             maxcc=dict(
@@ -268,11 +271,11 @@ def plot_window_histograms(xbins, ybins, hists: dict):
                 label="Counts"),
             dlna=dict(
                 cmap="seismic",
-                norm=lpy.MidpointNormalize(midpoint=0.0),
+                norm=lplt.MidpointNormalize(midpoint=0.0),
                 label="dlnA"),
             time_shift=dict(
                 cmap="seismic",
-                norm=lpy.MidpointNormalize(
+                norm=lplt.MidpointNormalize(
                     vmin=-12.5, vmax=12.5, midpoint=0.0),
                 label="CC-$\\Delta$ t"),
             maxcc=dict(
@@ -292,11 +295,11 @@ def plot_window_histograms(xbins, ybins, hists: dict):
                 label="Counts"),
             dlna=dict(
                 cmap="seismic",
-                norm=lpy.MidpointNormalize(midpoint=0.0),
+                norm=lplt.MidpointNormalize(midpoint=0.0),
                 label="dlna"),
             time_shift=dict(
                 cmap="seismic",
-                norm=lpy.MidpointNormalize(
+                norm=lplt.MidpointNormalize(
                     vmin=-12.5, vmax=12.5, midpoint=0.0),
                 label="CC-$\\Delta$ t"),
             maxcc=dict(
@@ -373,7 +376,7 @@ def plot_window_histograms(xbins, ybins, hists: dict):
                         "S", "SS", "SSS", "ScS", "Sdiff", "SKS", "SP", "SSP",
                         "SSSS", "ScSScS",
                     ]
-                    cols = lpy.pick_colors_from_cmap(
+                    cols = lplt.pick_colors_from_cmap(
                         len(super_phase_list), cmap)
                     colordict = {ph: col for ph,
                                  col in zip(super_phase_list, cols)}
@@ -393,9 +396,9 @@ def plot_window_histograms(xbins, ybins, hists: dict):
                     else:
                         phase_list = super_phase_list
 
-                    lpy.plot_traveltimes(0, phase_list=phase_list, cmap=cmap,
-                                         colordict=colordict, legend=False,
-                                         markersize=0.5)
+                    lseis.plot_traveltimes(0, phase_list=phase_list, cmap=cmap,
+                                           colordict=colordict, legend=False,
+                                           markersize=0.5)
 
                 elif _wtype == "surface":
                     axes[_i].set_ylim(0.0, 60.0)
@@ -406,12 +409,12 @@ def plot_window_histograms(xbins, ybins, hists: dict):
 
                 mu = zz[boolcounts].mean()
                 sig = zz[boolcounts].std()
-                labint, ndec = lpy.get_stats_label_length(mu, sig, ndec=2)
-                lpy.plot_label(axes[_i],
-                               f"$\\mu$ = {mu:>{labint}.{ndec}f}\n"
-                               f"$\\sigma$ = {sig:>{labint}.2f}",
-                               location=4, box=False,
-                               fontdict=dict(
+                labint, ndec = lplt.get_stats_label_length(mu, sig, ndec=2)
+                lplt.plot_label(axes[_i],
+                                f"$\\mu$ = {mu:>{labint}.{ndec}f}\n"
+                                f"$\\sigma$ = {sig:>{labint}.2f}",
+                                location=4, box=False,
+                                fontdict=dict(
                     fontfamily="monospace",
                     fontsize="small"))
 
@@ -420,14 +423,14 @@ def plot_window_histograms(xbins, ybins, hists: dict):
                     location = 2
                 else:
                     location = 1
-                lpy.plot_label(
+                lplt.plot_label(
                     axes[_i],
                     f"{_wtype.capitalize()}\n{_comp.capitalize()}",
                     location=location, box=False,
                     fontdict=dict(fontsize="small"))
 
                 # Plot colorbar
-                c = lpy.nice_colorbar(
+                c = lplt.nice_colorbar(
                     matplotlib.cm.ScalarMappable(
                         cmap=im1.cmap, norm=im1.norm),
                     pad=0.025, orientation='horizontal', aspect=40)
@@ -476,7 +479,7 @@ def compute_window_hists(mdict: dict, t_res: float = 5, deg_res: float = 1):
             t, e, tshift, mcc, amp, c = [], [], [], [], [], []
 
             N = len(t0)
-            Nmag = int(lpy.magnitude(N)+1)
+            Nmag = int(lmat.magnitude(N)+1)
             for _k, (_t0, _tf, _dt, _epi, _time_shift, _maxcc, _dlna, _chi) in \
                     enumerate(zip(t0, tf, dt, epi, time_shift, maxcc, dlna, chi)):
 

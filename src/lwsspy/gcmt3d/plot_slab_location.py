@@ -1,19 +1,23 @@
-import lwsspy as lpy
+# External
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
 from obspy.imaging.beachball import beach
 from cartopy import crs
 from obspy.geodetics.base import gps2dist_azimuth
-# Transformation function
+# Internal
+from .. import plot as lplt
+from .. import geo as lgeo
+from .. import maps as lmap
+from .. import seismo as lseis
 
 
-def plot_slab_location(cmtsource: lpy.CMTSource, cmtsource2=None,
+def plot_slab_location(cmtsource: lseis.CMTSource, cmtsource2=None,
                        point: bool = False):
 
     # Get slab location
-    dss = lpy.get_slabs()
-    vmin, vmax = lpy.get_slab_minmax(dss)
+    dss = lgeo.get_slabs()
+    vmin, vmax = lgeo.get_slab_minmax(dss)
 
     # Compute levels
     levels = np.linspace(vmin, vmax, 200)
@@ -40,19 +44,19 @@ def plot_slab_location(cmtsource: lpy.CMTSource, cmtsource2=None,
         llon = np.where(llon > 180.0, llon - 360, llon)
 
         # Check if slab overlaps
-        if lpy.in_extent(*extent, llon, llat):
+        if lmap.in_extent(*extent, llon, llat):
             filtered_dss.append(ds)
 
     # Plot map
     proj = crs.Mollweide(central_longitude=lon)
     ax = plt.axes(projection=proj)
     # ax.set_global()
-    lpy.plot_map()
-    lpy.plot_map(fill=False, borders=False, zorder=10)
+    lmap.plot_map()
+    lmap.plot_map(fill=False, borders=False, zorder=10)
     ax.set_extent(extent05)
 
     # Plot map with central longitude on event longitude
-    lpy.plot_slabs(dss=filtered_dss, levels=levels, cmap=cmap, norm=norm)
+    lgeo.plot_slabs(dss=filtered_dss, levels=levels, cmap=cmap, norm=norm)
 
     # Plot CMT as popint or beachball
     cdepth = cmap(norm(cmtsource.depth_in_m/-1000.0))
@@ -64,7 +68,7 @@ def plot_slab_location(cmtsource: lpy.CMTSource, cmtsource2=None,
     else:
 
         # Transform points because beachball isn't in map coordinates
-        p = lpy.geo2disp(proj, np.array(lon), np.array(lat))
+        p = lmap.geo2disp(proj, np.array(lon), np.array(lat))
         x, y = p[0, 0], p[0, 1]
 
         # Plot CMT 1
@@ -89,7 +93,7 @@ def plot_slab_location(cmtsource: lpy.CMTSource, cmtsource2=None,
                 linewidth=0.5, zorder=101,
                 transform=crs.PlateCarree())
         else:
-            p = lpy.geo2disp(
+            p = lmap.geo2disp(
                 proj,
                 np.array(cmtsource2.longitude),
                 np.array(cmtsource2.latitude))
@@ -102,14 +106,14 @@ def plot_slab_location(cmtsource: lpy.CMTSource, cmtsource2=None,
                       edgecolor='k', axes=ax, size=100, nofill=False)
             ax.add_collection(b)
 
-    c = lpy.nice_colorbar(aspect=40, fraction=0.1, shrink=0.6)
+    c = lplt.nice_colorbar(aspect=40, fraction=0.1, shrink=0.6)
     c.set_label("Depth [km]")
     axins = plt.axes(
         [0.02, 0.75, 0.23, 0.23],
         projection=crs.Orthographic(
             central_longitude=lon, central_latitude=lat))
     axins.set_global()
-    lpy.plot_map()
+    lmap.plot_map()
     axins.plot(lon, lat, '*r', markeredgecolor='k')
 
     return cmap, norm

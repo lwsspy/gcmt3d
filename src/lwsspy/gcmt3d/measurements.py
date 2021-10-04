@@ -1,8 +1,10 @@
 from typing import Optional
-import lwsspy as lpy
 from obspy import UTCDateTime, Stream
 import logging
 import numpy as np
+from .. import plot as lplot
+from .. import signal as lsig
+from .. import seismo as lseis
 
 
 def get_toffset(
@@ -32,7 +34,7 @@ def get_toffset(
 
 
 def get_measurements_and_windows(
-        obs: Stream, syn: Stream, event: lpy.seismo.CMTSource, logger: logging.Logger):
+        obs: Stream, syn: Stream, event: lseis.CMTSource, logger: logging.Logger):
     """Make measurements on two correpsonding streams.
 
     Parameters
@@ -41,7 +43,7 @@ def get_measurements_and_windows(
         Observed stream
     syn : Stream
         synthetic stream
-    event : lpy.CMTSource
+    event : lseis.CMTSource
         event
     logger : logging.Logger, optional
         Logger. Default None
@@ -119,13 +121,13 @@ def get_measurements_and_windows(
                         event.origin_time)
 
                     # Measurements
-                    max_cc_value, nshift = lpy.xcorr(wd, ws)
+                    max_cc_value, nshift = lsig.xcorr(wd, ws)
 
                     # Get fixed window indeces.
                     try:
                         istart, iend = win.left, win.right
                         istart_d, iend_d, istart_s, iend_s = \
-                            lpy.correct_window_index(
+                            lsig.correct_window_index(
                                 istart, iend, nshift, npts)
                         wd_fix = d[istart_d:iend_d]
                         ws_fix = s[istart_s:iend_s]
@@ -157,13 +159,13 @@ def get_measurements_and_windows(
                         _tr.stats.back_azimuth
                     )
 
-                    powerl1 = lpy.power_l1(wd, ws)
-                    powerl2 = lpy.power_l2(wd, ws)
-                    norm1 = lpy.norm1(wd)
-                    norm2 = lpy.norm2(wd)
-                    dnorm1 = lpy.dnorm1(wd, ws)
-                    dnorm2 = lpy.dnorm2(wd, ws)
-                    dlna = lpy.dlna(wd_fix, ws_fix)
+                    powerl1 = lsig.power_l1(wd, ws)
+                    powerl2 = lsig.power_l2(wd, ws)
+                    norm1 = lsig.norm1(wd)
+                    norm2 = lsig.norm2(wd)
+                    dnorm1 = lsig.dnorm1(wd, ws)
+                    dnorm2 = lsig.dnorm2(wd, ws)
+                    dlna = lsig.dlna(wd_fix, ws_fix)
                     trace_energy += norm2
 
                     windows[_component]["L1"].append(norm1)
@@ -191,7 +193,7 @@ def get_measurements_and_windows(
 
 
 def get_all_measurements(
-        datadict: dict, syntdict: dict, event: lpy.CMTSource,
+        datadict: dict, syntdict: dict, event: lseis.CMTSource,
         logger: Optional[logging.Logger] = None):
 
     window_dict = dict()

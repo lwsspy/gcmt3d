@@ -13,7 +13,7 @@ def plot_single_weight_set(
         ax, lat, lon, weights, nomean=False, vmin=None, vmax=None,
         nocolorbar=False):
 
-    lpy.plot_map()
+    lpy.maps.plot_map()
 
     # Custom minmax for the colorbar
     if not vmin:
@@ -26,7 +26,7 @@ def plot_single_weight_set(
         norm = Normalize(vmin=vmin, vmax=vmax)
         cmap = "rainbow"
     else:
-        norm = lpy.MidPointLogNorm(vmin=vmin, vmax=vmax, midpoint=1.0)
+        norm = lpy.plot.MidpointLogNorm(vmin=vmin, vmax=vmax, midpoint=1.0)
         cmap = "RdBu_r"
 
     plt.scatter(lon, lat, c=weights, cmap=cmap,
@@ -36,18 +36,19 @@ def plot_single_weight_set(
 
     # formatter = ticker.FuncFormatter(lambda y, _: '{:g}'.format(y))
     if nocolorbar is False:
-        cb = lpy.nice_colorbar(orientation='horizontal', aspect=40, pad=0.075)
+        cb = lpy.plot.nice_colorbar(
+            orientation='horizontal', aspect=40, pad=0.075)
         # np.arange(0.3, 3.0, 0.3),
         #    ticks=[0.3, 0.4, 0.6, 1.0, 1.5, 2.0, 3.0],
         #    format=formatter)
         cb.set_label("Weights")
 
-    lpy.plot_label(
+    lpy.plot.plot_label(
         ax,
         f"R = {np.max(weights)/np.min(weights):4.2f}",
         location=3, box=False, dist=0.0, fontdict=dict(fontsize='small'))
 
-    lpy.plot_label(
+    lpy.plot.plot_label(
         ax, f"S = {np.sum(weights):4.2f}",
         location=4, box=False, dist=0.0, fontdict=dict(fontsize='small'))
 
@@ -63,7 +64,7 @@ def plot_single_weight_hist(ax, weights, nbins=10, color="lightgray"):
                         linestyle='-',
                         histtype='stepfilled')
 
-    lpy.plot_label(
+    lpy.plot.plot_label(
         ax,
         f"min: {np.min(weights_norm):7.4f}\n"
         f"max: {np.max(weights_norm):7.4f}\n"
@@ -113,12 +114,12 @@ def plot_weight_histograms(weights: dict):
                 plot_single_weight_hist(ax, plotweights, nbins=10)
 
                 if _j == 0:
-                    # lpy.plot_label(ax, _wtype.capitalize() + f": {waveweight}",
+                    # lpy.plot.plot_label(ax, _wtype.capitalize() + f": {waveweight}",
                     #                location=14, box=False, dist=0.05)
 
                     plt.ylabel(_wtype.capitalize() + f": {waveweight:4.2f}")
                 if counter == 2:
-                    # lpy.plot_label(ax, _component.capitalize(),
+                    # lpy.plot.plot_label(ax, _component.capitalize(),
                     #                location=13, box=False, dist=0.05)
                     plt.xlabel(_component.capitalize())
 
@@ -180,11 +181,11 @@ def plot_weights(weights: dict):
                     ax, latitudes, longitudes, plotweights, nomean=nomean)
 
                 if _i == 0:
-                    lpy.plot_label(ax, _weight.capitalize(),
-                                   location=14, box=False, dist=0.05)
+                    lpy.plot.plot_label(ax, _weight.capitalize(),
+                                        location=14, box=False, dist=0.05)
                 if _j == 0:
-                    lpy.plot_label(ax, _component.capitalize(),
-                                   location=13, box=False, dist=0.05)
+                    lpy.plot.plot_label(ax, _component.capitalize(),
+                                        location=13, box=False, dist=0.05)
 
         plt.suptitle(f"{_wtype.capitalize()}: {waveweight:6.4f}")
         plt.savefig(f"./weights_{_wtype}.pdf")
@@ -251,29 +252,29 @@ def plot_final_weights(weights: dict):
                 nomean=True, vmin=vmin, vmax=vmax, nocolorbar=True)
 
             if _i == 0:
-                lpy.plot_label(ax, f"{_wtype.capitalize()}: {waveweight:6.4f}",
-                               location=14, box=False, dist=0.05)
+                lpy.plot.plot_label(ax, f"{_wtype.capitalize()}: {waveweight:6.4f}",
+                                    location=14, box=False, dist=0.05)
             if _j - neg == 0:
-                lpy.plot_label(ax, _component.capitalize(),
-                               location=13, box=False, dist=0.05)
+                lpy.plot.plot_label(ax, _component.capitalize(),
+                                    location=13, box=False, dist=0.05)
 
             if _j-neg == 1 and _i == 2:
-                cax = lpy.axes_from_axes(
+                cax = lpy.plot.axes_from_axes(
                     ax, n=91230, extent=[-0.25, -0.25, 1.5, 0.05])
                 norm = Normalize(vmin=vmin, vmax=vmax)
                 cmap = "rainbow"
 
                 sc = ScalarMappable(norm=norm, cmap=plt.get_cmap(cmap))
-                cb = lpy.nice_colorbar(
+                cb = lpy.plot.nice_colorbar(
                     sc, cax=cax, orientation='horizontal', aspect=40, pad=0.075)
                 cb.set_label("Weights")
 
             if _i == 2 and _j-neg == 0:
-                lpy.plot_label(ax, f"$\mathrm{{R}}_\mathrm{{T}}$ = {vmax/vmin:4.2f}",
-                               location=11, box=False, dist=0.125)
+                lpy.plot.plot_label(ax, f"$\mathrm{{R}}_\mathrm{{T}}$ = {vmax/vmin:4.2f}",
+                                    location=11, box=False, dist=0.125)
             if _i == 2 and _j-neg == 2:
-                lpy.plot_label(ax, f"$\mathrm{{S}}_\mathrm{{T}}$ = {np.sum(allweights):4.2f}",
-                               location=10, box=False, dist=0.125)
+                lpy.plot.plot_label(ax, f"$\mathrm{{S}}_\mathrm{{T}}$ = {np.sum(allweights):4.2f}",
+                                    location=10, box=False, dist=0.125)
 
         # plt.suptitle(f"{_wtype.capitalize()}: {waveweight:6.4f}")
     plt.savefig(f"./weights_final.pdf")

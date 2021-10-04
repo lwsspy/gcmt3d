@@ -50,8 +50,8 @@ def get_optimization_stats(database):
 def bin():
     plt.switch_backend('pdf')
     import argparse
-    import lwsspy as lpy
-    lpy.updaterc()
+    import lwsspy.plot as lplt
+    lplt.updaterc()
 
     # Get arguments
     parser = argparse.ArgumentParser()
