@@ -17,12 +17,12 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'lwsspy'
-copyright = '2020, Lucas Sawade'
+project = 'lwsspy.gcmt3d'
+copyright = '2021, Lucas Sawade'
 author = 'Lucas Sawade'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1alpha'
+release = '0.0.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -35,6 +35,7 @@ extensions = [
     "sphinx.ext.autosummary",
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    'sphinx.ext.autosectionlabel',
     'numpydoc',
 ]
 
@@ -57,4 +58,19 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_title = "LWSSPY - GCMT3D"
+html_logo = "figures/logo.png"
+html_favicon = "figures/favicon.ico"
+
+html_theme = 'sphinx_book_theme'
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ['_static']
+
+html_theme_options = {
+    "repository_url": "https://github.com/lwsspy/lwsspy.ml",
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "use_edit_page_button": True,
