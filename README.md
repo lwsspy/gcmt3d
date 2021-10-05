@@ -1,72 +1,16 @@
-# Collection of my codes.
+# Codes for GCMT3D 
 
-Here I'm going to collect all codes hat I create. I will edit them etc.
-`lwsspy` is the complement to `lwss`, which is for matlab codes.
+|__Documentation__| __https://lwsspy.github.io/lwsspy.gcmt3d__|
+|-|-|
+|__Deployment__  | __[![PyPI version](https://badge.fury.io/py/lwsspy.gcmt3d.svg)](https://badge.fury.io/py/lwsspy.gcmt3d)__|
+|__Build Status__| __[![Build Status](https://travis-ci.com/lwsspy/lwsspy.gcmt3d.svg?branch=main)](https://travis-ci.com/lwsspy/lwsspy.gcmt3d)__|
+|__License__     |__[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)__|
+
 
 ---
 
 ## Installation
 
-Hopefully, it works using `conda install lwsspy` will work in the future.
-
-### Installation using Pip
-
-However, 
-
 ```bash
-git clone git@github.com:lsawade/lwsspy.git
-cd lwsspy
-pip install .
-```
-
-Should work. Use `pip install -e .` for development mode.
-
-### Summit/Traverse/Parallel
-
-It's a bit more convoluted since we will have to install some things using,
-`conda`, then install `parallel HDF5`, `mpi4py`, and `h5py`. And then,
-we can install the rest of the functions via `pip`.
-
-
-1. `conda env create -f summitenv.yml`
-2. Check the documentation for the installation of Parallel HDF5 on the cluster, and
-subsequent installations of `mpi4py`, and `h5py`.
-3. `pip install summitreq.yml`
-
-
----
-
-## `PYTHONSTARTUP`
-
-This repo contains a `startup.py` file that can be called when loading the 
-python shell. If following line
-
-```bash
-export PYTHONSTARTUP=path/to/repo/startupfiles/python.py
-```
-
-is added to the `~/.bashrc` file, Python will use the environment variable 
-to load up the script. The script right now is set to load all of `pyplot`'s and
-`numpy`'s functions without prefix as well as all of `lwsspy`'s functions.
-
-This makes it possible to simply do small commands in Matlab style such as
-`help(fakerelation)` or `plot(x,y,'o')`, etc.
-
-## Autoreload modules before execution
-
-In addition to the Python startup file. Ipython has the ability to reload
-modified modules on the fly. This is extremely convenient:
-
-Simply run the line:
-
-```bash
-cp path/to/repo/startupfiles/ipython.ipy ~/.ipython/profile_default/startup/
-```
-
-To run the lines in ipython.ipy. The lines are the following:
-
-```
-# Activate autoreload
-%load_ext autoreload
-%autoreload 2
+pip install lwsspy.gcmt3d
 ```
