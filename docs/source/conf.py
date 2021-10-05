@@ -59,8 +59,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # a list of builtin themes.
 #
 html_title = "LWSSPY - GCMT3D"
-html_logo = "figures/logo.png"
-html_favicon = "figures/favicon.ico"
+html_logo = "chapters/figures/logo.png"
+html_favicon = "chapters/figures/favicon.ico"
 
 html_theme = 'sphinx_book_theme'
 
