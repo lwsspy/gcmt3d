@@ -32,8 +32,9 @@ tightly knit with the `gcmt3d` package and chances are you will have to edit
 their source code anyways. To make that process seemless, I created a script
 that performs the installation from scratch [devinstall.sh].
 
+First navigate to where you want install everything then
 ```bash
-curl -Lks 
+curl -Lks -Lks https://raw.github.com/lwsspy/lwsspy.gcmt3d/main/devinstall.sh | /bin/bash
 ```
 
 

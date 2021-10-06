@@ -1,6 +1,6 @@
 .mypy_cache
 environment.yml
-lwsspy.egg-info
+*.egg-info
 __pycache__
 *.pyc
 .DS_Store
@@ -19,3 +19,4 @@ docs/source/chapters/figures/dem_animation
 *.png
 *.pdf
 *.svg
+
