@@ -1,0 +1,8 @@
+
+mindict:
+  moment_magnitude: 5.5
+  origin_time: 2000-01-01T00:00:00
+
+maxdict:
+  moment_magnitude: 8.0
+  origin_time: 2020-01-01T00:00:00

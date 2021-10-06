@@ -1,0 +1,66 @@
+#!/bin/bash
+#BSUB -P GEO111
+#BSUB -W 2:00
+#BSUB -nnodes 11
+### # - BSUB -J "invertcmt[1-999]%50"
+#######---BSUB -J "invertcmt[1-100:4]%5"
+#BSUB -o mt.si.hd2.%J.txt
+#BSUB -alloc_flags "gpumps" 
+
+# just in case
+ulimit -s unlimited
+
+# load things
+module purge
+module load gcc spectrum-mpi cuda
+source ~/anaconda3_summit/bin/activate
+conda activate lwsspy
+
+export OPENBLAS_NUM_THREADS=1
+
+# Run inversion exectubale
+submissiondir="/ccs/home/lsawade/SI_mt_si_final"
+
+# Subdirs
+cmtdir="${submissiondir}/cmtsolutions"
+submitteddir="${submissiondir}/submitted"
+donedir="${submissiondir}/done"
+faildir="${submissiondir}/fail"
+logs="${submissiondir}/logs"
+inputfile="${submissiondir}/parameters/input.yml"
+
+# Get submitted cmtsolution
+cmtid=$(python check_submission.py $cmtdir $submitteddir)
+
+
+# If no more cmts in the list, stop
+if [[ "${cmtid}" == "DONE" ]] 
+then
+    echo "CMTSOLUTION list is at its end or all cmts are in the submission folder."
+    exit 0
+fi
+
+# Get location and echoing it
+cmtsolution=$cmtdir/$cmtid
+echo $cmtsolution
+
+# Copy cmt to submitted directory
+cp $cmtsolution $submitteddir/$cmtid
+
+# Run inversion
+jsrun -n 1 -a 1 -c 42 -o $logs/${cmtid}.out.txt -k $logs/${cmtid}.out.txt gcmt3d-invert $cmtsolution -i $inputfile & 
+
+
+if [ $? -eq 0 ]; then
+    echo OK
+   
+    # Copy cmt to done 
+    cp $cmtsolution $donedir/$cmtid
+
+else
+    echo FAIL
+
+    # Copy cmt to done 
+    cp $cmtsolution $faildir/$cmtid
+
+fi

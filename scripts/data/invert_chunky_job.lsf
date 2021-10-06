@@ -1,0 +1,124 @@
+#!/bin/bash
+#BSUB -P GEO111
+#BSUB -W 2:00
+#BSUB -nnodes 55
+#BSUB -J "inversion[1-440]"
+#BSUB -o inversion.si.%J.%I.txt
+#BSUB -alloc_flags "gpumps" 
+
+
+
+# 220 Nodes
+# concurrent jobs 20
+limit_jobs()
+{
+   while true; do
+      if [ "$(jobs -p | wc -l)" -lt "$1" ]; then break; fi
+      usleep 500000 # Sleep for half a second
+   done
+}
+
+
+# Some function that takes a long time to process
+longprocess() {
+    # Sleep up to 14 seconds
+    sleep $((RANDOM % 15))
+    
+    # Randomly exit with 0 or 1
+    exit $((RANDOM % 2))
+}
+
+
+# just in case
+ulimit -s unlimited
+
+# load things
+module purge
+module load gcc spectrum-mpi cuda
+source ~/anaconda3_summit/bin/activate
+conda activate lwsspy
+
+export OPENBLAS_NUM_THREADS=1
+
+# Run inversion exectubale
+submissiondir="/ccs/home/lsawade/SI_mt_si_final"
+
+cmtdir="${submissiondir}/cmtsolutions"
+submitteddir="${submissiondir}/submitted"
+donedir="${submissiondir}/done"
+faildir="${submissiondir}/fail"
+logs="${submissiondir}/logs"
+inputfile="${submissiondir}/parameters/input.yml"
+
+cmtsolutions=($(ls $cmtdir))
+
+
+# Indexing
+#i=50 # $(($LSB_JOBINDEX-1))
+
+# Maximum number of Inversions
+MAXINV=5
+MAXJOBS=10 # Not doing more than 5 inversions anyways..
+
+pids=()
+cmts=()
+
+# Helpful if job array is run
+# Add counter
+RAND=$((1 + $RANDOM % 120))
+sleep $RAND
+
+for i in $(seq 1 $MAXINV); do
+
+    # Get submitted cmtsolution
+    cmtid=$(python check_submission.py $cmtdir $submitteddir)
+    
+    # If no more cmts in the list, stop
+    if [[ "${cmtid}" == "DONE" ]] 
+    then
+	echo "CMTSOLUTION list is at its end or all cmts are in the submission folder."
+	break
+    fi
+    
+    # Cmtsolution location
+    cmtsolution=$cmtdir/$cmtid
+
+    echo SUBMITTING cmtsolution=$cmtdir/${cmtid} FOR INVERSION
+
+    # Copy cmt to submitted directory
+    cp $cmtsolution $submitteddir/${cmtid}
+
+    # Run inversion
+    jsrun -n 1 -a 1 -c 42 -o $logs/${cmtid}.out.txt -k $logs/${cmtid}.out.txt gcmt3d-invert $cmtsolution -i $inputfile & 
+    # longprocess &
+
+    # Save Process ID
+    # store PID of process
+    pids+=("$!")
+    cmts+=("${cmtid}")
+    # counter=$((counter+1))
+
+    # Wait if job number is over 10!
+    limit_jobs $MAXJOBS
+    
+done
+
+
+for i in ${!pids[@]}; do
+
+    if wait ${pids[$i]}; then
+
+	echo ${cmts[$i]} SUCCESS
+
+	# Copy cmt to done 
+	cp $cmtsolution $donedir/${cmts[$i]}
+
+    else
+	echo ${cmts[$i]} FAIL
+
+	# Copy cmt to done 
+	cp $cmtsolution $faildir/${cmts[$i]}
+
+    fi
+
+done
