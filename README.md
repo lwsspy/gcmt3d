@@ -36,7 +36,7 @@ that performs the installation from scratch [devinstall.sh].
 
 First navigate to where you want install everything then
 ```bash
-curl -Lks -Lks https://raw.github.com/lwsspy/lwsspy.gcmt3d/main/devinstall.sh | /bin/bash -i
+curl -Lks https://raw.github.com/lwsspy/lwsspy.gcmt3d/main/devinstall.sh | /bin/bash -i
 ```
 
 

@@ -3,7 +3,10 @@
 # Exit on error
 set -e
 
-mkdir lwsspy-dev
+if [ ! -d lwsspy-dev ]
+then
+    mkdir lwsspy-dev
+fi
 cd lwsspy-dev
 
 # URLs
