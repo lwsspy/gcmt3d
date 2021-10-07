@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 mkdir lwsspy-dev
 cd lwsspy-dev
 
@@ -16,7 +19,7 @@ git clone $LWSSPYGCMT3D
 # Create environment from lwsspy's file
 cd lwsspy
 conda env create -n lwsspy-dev -f environment.yml
-conda activate lwsspy
+conda activate lwsspy-dev
 pip install -e .
 cd ..
 
