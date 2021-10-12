@@ -4,8 +4,7 @@ CMTSOLUTTION depth.
 """
 # %% Create inversion directory
 
-# Internal
-from .M0 import get_all_measurements
+# Namespace
 from .. import inversion as linv
 from .. import plot as lplt
 from .. import seismo as lseis
@@ -16,8 +15,14 @@ from .. import math as lmat
 from .. import maps as lmap
 from .. import signal as lsig
 from ..seismo.source import CMTSource
-from ..seismo.process.queue_multiprocess_stream import queue_multiprocess_stream
-from ..seismo.window.queue_multiwindow_stream import queue_multiwindow_stream
+from ..seismo.process.queue_multiprocess_stream import \
+    queue_multiprocess_stream
+from ..seismo.window.queue_multiwindow_stream import \
+    queue_multiwindow_stream
+
+# Internal
+from .process_classifier import ProcessParams
+from .measurements import get_all_measurements
 
 # External
 import os
@@ -25,19 +30,13 @@ import asyncio
 import shutil
 import datetime
 import numpy as np
-from itertools import repeat
 from copy import deepcopy
-from typing import Callable, Union, Optional, List
+from typing import Callable, Union, Optional
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_pdf import PdfPages
 from obspy import read, read_events, Stream, Trace
-from obspy.core import event
-from obspy.core.utcdatetime import UTCDateTime
-import multiprocessing.pool as mpp
 import _pickle as cPickle
-from .process_classifier import ProcessParams
-from .measurements import get_all_measurements
 import logging
 
 lplt.updaterc(rebuild=False)
@@ -298,8 +297,10 @@ class GCMT3DInversion:
                 # given to the class
                 self.processdict[_wave]['process']['relative_endtime'] = \
                     _process_dict["relative_endtime"]
-                if self.processdict[_wave]['process']['relative_endtime'] > self.duration:
-                    self.processdict[_wave]['process']['relative_endtime'] = self.duration
+                if self.processdict[_wave]['process']['relative_endtime'] \
+                        > self.duration:
+                    self.processdict[_wave]['process']['relative_endtime'] \
+                        = self.duration
 
                 # Adjust windowing config
                 for _windict in self.processdict[_wave]["window"]:
@@ -394,15 +395,17 @@ class GCMT3DInversion:
                     _dict["scale"] = self.cmtsource.M0
 
         # Check whether Mrr, Mtt, Mpp are there for zero trace condition
-        # It's important to note here that the zero_trace_array in the following
-        # part is simply the gradient of the constraint with repspect to the
-        # model parameters. For the zero_energy constraint, we explicitly have
-        # have to compute this gradient from measurements, and is therefore
-        # "missing" here
+        # It's important to note here that the zero_trace_array in the
+        # following part is simply the gradient of the constraint with repspect
+        # to the model parameters. For the zero_energy constraint, we
+        # explicitly have have to compute this gradient from measurements,
+        # and is therefore "missing" here
         if self.zero_trace:  # and not self.zero_energy:
 
-            self.zero_trace_array = np.array([1.0 if _par in ['m_rr', 'm_tt', 'm_pp'] else 0.0
-                                              for _par in self.pardict.keys()])
+            self.zero_trace_array = np.array(
+                [1.0 if _par in ['m_rr', 'm_tt', 'm_pp'] else 0.0
+                 for _par in self.pardict.keys()]
+            )
             self.zero_trace_index_array = np.where(
                 self.zero_trace_array == 1.)[0]
             self.zero_trace_array = np.append(self.zero_trace_array, 0.0)
@@ -561,8 +564,8 @@ class GCMT3DInversion:
                         latitudes, longitudes, nbins=12, p=0.5)
 
                     # Save azi weights into dict
-                    self.weights[_wtype][_component]["azimuthal"] = deepcopy(
-                        azi_weights)
+                    self.weights[_wtype][_component]["azimuthal"] \
+                        = deepcopy(azi_weights)
 
                     # Get Geographical weights
                     gw = lgeo.GeoWeights(latitudes, longitudes)
@@ -570,8 +573,8 @@ class GCMT3DInversion:
                     geo_weights = gw.get_weights(ref)
 
                     # Save geo weights into dict
-                    self.weights[_wtype][_component]["geographical"] = deepcopy(
-                        geo_weights)
+                    self.weights[_wtype][_component]["geographical"] \
+                        = deepcopy(geo_weights)
 
                     # Compute Combination weights.
                     weights = (azi_weights * geo_weights)
@@ -750,7 +753,7 @@ class GCMT3DInversion:
                     _stream, **processdict)
             else:
                 lutils.log_action(
-                    f"Processing in parallel using {self.multiprocesses} cores",
+                    f"Parallel processing using {self.multiprocesses} cores",
                     plogger=self.logger.debug)
                 self.data_dict[_wtype] = queue_multiprocess_stream(
                     _stream, processdict, nproc=self.multiprocesses)
@@ -1054,7 +1057,8 @@ class GCMT3DInversion:
                     dsyn_pars["USE_SOURCE_DERIVATIVE"] = False
 
                 # Adapt duration
-                dsyn_pars["RECORD_LENGTH_IN_MINUTES"] = self.simulation_duration
+                dsyn_pars["RECORD_LENGTH_IN_MINUTES"] \
+                    = self.simulation_duration
 
                 # Write Stuff to Par_file
                 lseis.write_parfile(dsyn_pars, dsyn_parfile)
@@ -1192,13 +1196,15 @@ class GCMT3DInversion:
             self.__window__()
             self.not_windowed_yet = False
 
-        return self.__compute_cost__(), self.__compute_gradient__() * self.scale
+        return (
+            self.__compute_cost__(), self.__compute_gradient__() * self.scale
+        )
 
     def compute_cost_gradient_hessian(self, model):
 
         # Update model
         if self.zero_trace:  # and not self.zero_energy:
-            mu = model[-1]
+            # mu = model[-1]
             self.model = model[:-1] * self.scale
             self.scaled_model = model[:-1]
         else:
@@ -1590,7 +1596,8 @@ class GCMT3DInversion:
         for _i in range(z.shape[0]):
             for _j in range(z.shape[1]):
                 dm[_i, _j, :] = np.linalg.solve(
-                    hess[_i, _j, :, :] + damp * np.diag(np.ones(2)), - grad[_i, _j, :])
+                    hess[_i, _j, :, :]
+                    + damp * np.diag(np.ones(2)), - grad[_i, _j, :])
         plt.switch_backend("pdf")
         extent = [np.min(t), np.max(t), np.min(z), np.max(z)]
         aspect = (np.max(t) - np.min(t))/(np.max(z) - np.min(z))
@@ -1686,14 +1693,16 @@ class GCMT3DInversion:
     def plot_data(self, outputdir="."):
         plt.switch_backend("pdf")
         for _wtype in self.processdict.keys():
-            with PdfPages(os.path.join(outputdir, f"data_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"data_{_wtype}.pdf")) as pdf:
                 for obsd_tr in self.data_dict[_wtype]:
                     fig = plot_seismograms(obsd_tr, cmtsource=self.cmtsource,
                                            tag=_wtype)
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-Data-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1777,7 +1786,8 @@ class GCMT3DInversion:
                 self.logger.warning(
                     f"Could load station {network}{station} -- {e}")
             # Plot PDF for each wtype
-            with PdfPages(os.path.join(outputdir, f"{network}.{station}_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"{network}.{station}_{_wtype}.pdf")) as pdf:
                 for component in ["Z", "R", "T"]:
                     try:
                         obsd_tr = obsd.select(
@@ -1787,8 +1797,9 @@ class GCMT3DInversion:
                             station=station, network=network,
                             component=component)[0]
                     except Exception as err:
-                        self.logger.warning(f"Couldn't find obs or syn for NET.STA.COMP:"
-                                            f" {network}.{station}.{component} -- {err}")
+                        self.logger.warning(
+                            f"Couldn't find obs or syn for NET.STA.COMP:"
+                            f" {network}.{station}.{component} -- {err}")
                         continue
 
                     fig = plot_seismograms(obsd_tr, synt_tr, self.cmtsource,
@@ -1796,7 +1807,8 @@ class GCMT3DInversion:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1836,11 +1848,14 @@ class GCMT3DInversion:
 
                             fig = plot_seismograms(
                                 synt_tr, cmtsource=self.cmtsource,
-                                tag=f"{_wtype.capitalize()}-{_par.capitalize()}")
-                            pdf.savefig()  # saves the current figure into a pdf page
+                                tag=f"{_wtype.capitalize()}-"
+                                f"{_par.capitalize()}")
+                            # saves the current figure into a pdf page
+                            pdf.savefig()
                             plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1853,7 +1868,8 @@ class GCMT3DInversion:
         plt.switch_backend("pdf")
         for _wtype in self.processdict.keys():
             self.logger.info(f"Plotting {_wtype} waves")
-            with PdfPages(os.path.join(outputdir, f"windows_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"windows_{_wtype}.pdf")) as pdf:
                 for obsd_tr in self.data_dict[_wtype]:
                     try:
                         synt_tr = self.synt_dict[_wtype]["synt"].select(
@@ -1872,7 +1888,8 @@ class GCMT3DInversion:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    #  object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1885,17 +1902,19 @@ class GCMT3DInversion:
         plt.switch_backend("pdf")
         for _wtype in self.processdict.keys():
             self.logger.info(f"Plotting {_wtype} waves")
-            with PdfPages(os.path.join(outputdir, f"final_windows_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"final_windows_{_wtype}.pdf")) as pdf:
                 for obsd_tr in self.data_dict[_wtype]:
                     try:
                         synt_tr = self.synt_dict[_wtype]["synt"].select(
                             station=obsd_tr.stats.station,
                             network=obsd_tr.stats.network,
                             component=obsd_tr.stats.component)[0]
-                        init_synt_tr = self.synt_dict_init[_wtype]["synt"].select(
-                            station=obsd_tr.stats.station,
-                            network=obsd_tr.stats.network,
-                            component=obsd_tr.stats.component)[0]
+                        init_synt_tr \
+                            = self.synt_dict_init[_wtype]["synt"].select(
+                                station=obsd_tr.stats.station,
+                                network=obsd_tr.stats.network,
+                                component=obsd_tr.stats.component)[0]
                     except Exception as err:
                         self.logger.warning(
                             "Couldn't find corresponding synt for "
@@ -1908,7 +1927,8 @@ class GCMT3DInversion:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -2107,7 +2127,8 @@ def bin():
         lutils.log_bar("GN", plogger=gcmt3d.logger.info)
         optim_gn = linv.Optimization("gn")
         optim_gn.logger = gcmt3d.logger.info
-        optim_gn.compute_cost_and_grad_and_hess = gcmt3d.compute_cost_gradient_hessian
+        optim_gn.compute_cost_and_grad_and_hess \
+            = gcmt3d.compute_cost_gradient_hessian
 
         # Set attributes depending on the optimization input parameters
         for key, val in inputdict["optimization"].items():
