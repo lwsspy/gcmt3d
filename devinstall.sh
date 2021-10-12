@@ -14,7 +14,7 @@ LWSSPY=https://github.com/lwsspy/lwsspy
 LWSSPYSEISMO=https://github.com/lwsspy/lwsspy.seismo
 LWSSPYGCMT3D=https://github.com/lwsspy/lwsspy.gcmt3d
 
-# Clone all 3 repositories 
+# Clone all 3 repositories
 git clone $LWSSPY
 git clone $LWSSPYSEISMO
 git clone $LWSSPYGCMT3D

@@ -39,7 +39,18 @@ First navigate to where you want install everything then
 curl -Lks https://raw.github.com/lwsspy/lwsspy.gcmt3d/main/devinstall.sh | /bin/bash -i
 ```
 
+## Run Tests
 
+```bash
+cd <repo>
+pytest tests
+```
+
+For some reason the `pytest` command fails due to relative import issues when
+run without arguments, so please add the directory `tests` as a directory input.
+
+It's sort of puzzling because I use `pytest` without arguments for 
+`lwsspy.seismo` and have `0` issues.
 
 
 [devinstall.sh]: devinstall.sh

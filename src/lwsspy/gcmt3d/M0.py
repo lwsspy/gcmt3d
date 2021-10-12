@@ -1,16 +1,18 @@
+import sys
+from pprint import pprint
+import numpy as np
+from .io import write_fixed_traces
+from .measurements import get_all_measurements
+from .io import read_measurements
+from .io import read_output_traces
+from .. import maps as lmap
+from .. import seismo as lseis
+from ..seismo import stream_multiply
+from ..seismo import CMTSource
 import os
 from typing import Optional
 from copy import deepcopy
 import _pickle as cPickle
-from lwsspy import CMTSource
-from lwsspy import stream_multiply
-from lwsspy import read_output_traces
-from lwsspy import read_measurements
-from .measurements import get_all_measurements
-from .io import write_fixed_traces
-import numpy as np
-from pprint import pprint
-import sys
 
 
 def eprint(*args, **kwargs):

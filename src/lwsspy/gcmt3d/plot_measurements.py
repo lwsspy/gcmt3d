@@ -11,10 +11,10 @@ from glob import glob
 from typing import Optional
 import os
 # Internal
-from .. import plot as lplt
-from .. import base as lbase
-from .. import seismo as lseis
-from .. import math as lmat
+from lwsspy import plot as lplt
+from lwsspy import base as lbase
+from lwsspy import seismo as lseis
+from lwsspy import math as lmat
 
 lplt.updaterc()
 

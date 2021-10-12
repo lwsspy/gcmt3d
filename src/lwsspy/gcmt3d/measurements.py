@@ -2,9 +2,9 @@ from typing import Optional
 from obspy import UTCDateTime, Stream
 import logging
 import numpy as np
-from .. import plot as lplot
-from .. import signal as lsig
-from .. import seismo as lseis
+from lwsspy import plot as lplot
+from lwsspy import signal as lsig
+from lwsspy import seismo as lseis
 
 
 def get_toffset(
