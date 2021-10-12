@@ -611,7 +611,7 @@ def get_database_measurements(
 def bin():
 
     import argparse
-    updaterc()
+    lplt.updaterc()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--database', dest='database',
@@ -662,7 +662,7 @@ def bin():
 def bin_plot_pickles():
 
     import argparse
-    updaterc()
+    lplt.updaterc()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(dest='before',

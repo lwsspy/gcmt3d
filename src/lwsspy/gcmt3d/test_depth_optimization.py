@@ -15,28 +15,28 @@ from obspy import read, read_events
 from obspy.imaging.beachball import beach
 
 # Internal
-from lwsspy import plot_station_xml
-from lwsspy import process_wrapper
-from lwsspy import read_inventory
-from lwsspy import CMTSource
-from lwsspy import window_on_stream
-from lwsspy import add_tapers
-from lwsspy import stream_cost_win
-from lwsspy import stream_grad_frechet_win
-from lwsspy import stream_grad_and_hess_win
-from lwsspy import stream_multiply
-from lwsspy import createsimdir
-from lwsspy import read_parfile
-from lwsspy import stationxml2STATIONS
-from lwsspy import write_parfile
-from lwsspy import Optimization
-from lwsspy import plot_optimization
-from lwsspy import plot_model_history
-from lwsspy import updaterc
-from lwsspy import run_cmds_parallel
-from lwsspy import read_yaml_file
-from lwsspy import print_action, print_bar, print_section
-updaterc()
+# from lwsspy import plot_station_xml
+# from lwsspy import process_wrapper
+# from lwsspy import read_inventory
+# from lwsspy import CMTSource
+# from lwsspy import window_on_stream
+# from lwsspy import add_tapers
+# from lwsspy import stream_cost_win
+# from lwsspy import stream_grad_frechet_win
+# from lwsspy import stream_grad_and_hess_win
+# from lwsspy import stream_multiply
+# from lwsspy import createsimdir
+# from lwsspy import read_parfile
+# from lwsspy import stationxml2STATIONS
+# from lwsspy import write_parfile
+# from lwsspy import Optimization
+# from lwsspy import plot_optimization
+# from lwsspy import plot_model_history
+# from lwsspy import updaterc
+# from lwsspy import run_cmds_parallel
+# from lwsspy import read_yaml_file
+# from lwsspy import print_action, print_bar, print_section
+# updaterc()
 
 
 # Main parameters
