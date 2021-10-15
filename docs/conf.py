@@ -36,8 +36,16 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.autosectionlabel',
+    'myst_parser',
     'numpydoc',
 ]
+
+source_suffix = {
+    '.rst': "restructuredtext",
+    '.md': 'markdown',
+    # '.txt': 'markdown',
+}
+
 
 numpydoc_show_class_members = False
 

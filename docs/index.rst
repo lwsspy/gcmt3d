@@ -10,7 +10,7 @@ Welcome to lwsspy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   chapters/functions.rst
+   chapters/introduction/introduction
 
 Indices and tables
 ==================

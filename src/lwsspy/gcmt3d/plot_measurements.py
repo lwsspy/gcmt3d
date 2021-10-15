@@ -109,6 +109,9 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
     else:
         component_bins = [75, 75, 75]
 
+    # Plot centerline for orientation if dist is similar to gaussian..
+    plotcenterline = True if mtype in ["time_shift", "dlna"] else False
+
     if blabel is None:
         blabel = "$m_0$"
 
@@ -178,10 +181,18 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
                             fontsize="small", dist=0.025)
             lplt.plot_label(ax, lbase.abc[counter], location=6, box=False,
                             fontsize="small", dist=0.025)
+
             if no_after is False:
-                ax.set_ylim((0, 1.5*np.max([np.max(nb), np.max(na)])))
+                nmax = np.max([np.max(nb), np.max(na)])
             else:
-                ax.set_ylim((0, 1.5*np.max(nb)))
+                nmax = np.max(nb)
+
+            if plotcenterline:
+                plt.plot([0, 0], [0, 1.1*nmax], "k--", lw=1.00)
+                plt.plot([0, 0], [1.1*nmax, 1.5*nmax], ":",
+                         lw=1.00, c='lightgray', zorder=-1)
+
+            ax.set_ylim((0, 1.5*nmax))
 
             if mtype == "chi":
                 location = 'upper left'
