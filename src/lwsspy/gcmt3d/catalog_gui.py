@@ -650,7 +650,7 @@ class CatalogExplore:
 
         ybeach = 0.85
         xbeach = 0.2
-        width = 200
+        width = 100
         self.beach(
             otensor, xy=(xbeach, ybeach), width=width, color='k')
         self.beach(
