@@ -514,7 +514,8 @@ class CatalogExplore:
         )
 
         # Plot things
-        plt.figure(figsize=(10, 6))
+        fig = plt.figure(figsize=(10, 6))
+        fig.suptitle(f'{self.ids[self.selected_event]}')
         plt.subplots_adjust(left=0.01, bottom=0.01, right=0.99, top=0.925)
         counter = 0
         for _w in ['body', 'surface', 'mantle']:
@@ -561,13 +562,13 @@ class CatalogExplore:
 
         fig = plot_measurements(before, after, blabel='GCMT',
                                 alabel='GCMT3D+', mtype='chi')
-        fig.suptitle('Waveform Misfit')
+        fig.suptitle(f'{self.ids[self.selected_event]} - Waveform Misfit')
         fig = plot_measurements(before, after, blabel='GCMT',
                                 alabel='GCMT3D+', mtype='dlna')
-        fig.suptitle('dlnA')
+        fig.suptitle(f'{self.ids[self.selected_event]} - dlnA')
         fig = plot_measurements(before, after, blabel='GCMT',
                                 alabel='GCMT3D+', mtype='time_shift')
-        fig.suptitle('Time shift')
+        fig.suptitle(f'{self.ids[self.selected_event]} - Time shift')
 
     def onpick(self, event):
         ind = event.ind
