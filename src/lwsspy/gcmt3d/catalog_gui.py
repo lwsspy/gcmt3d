@@ -558,12 +558,16 @@ class CatalogExplore:
             self.logger.debug('After couldnt be found')
 
         # Plot things
-        plot_measurements(before, after, blabel='GCMT',
-                          alabel='GCMT3D+', mtype='chi')
-        plot_measurements(before, after, blabel='GCMT',
-                          alabel='GCMT3D+', mtype='dlna')
-        plot_measurements(before, after, blabel='GCMT',
-                          alabel='GCMT3D+', mtype='time_shift')
+
+        fig = plot_measurements(before, after, blabel='GCMT',
+                                alabel='GCMT3D+', mtype='chi')
+        fig.suptitle('Waveform Misfit')
+        fig = plot_measurements(before, after, blabel='GCMT',
+                                alabel='GCMT3D+', mtype='dlna')
+        fig.suptitle('dlnA')
+        fig = plot_measurements(before, after, blabel='GCMT',
+                                alabel='GCMT3D+', mtype='time_shift')
+        fig.suptitle('Time shift')
 
     def onpick(self, event):
         ind = event.ind

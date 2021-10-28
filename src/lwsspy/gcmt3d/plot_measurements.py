@@ -222,7 +222,7 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
             else:
                 ax.tick_params(labelbottom=False)
             counter += 1
-
+    return fig
     # plt.show(block=False)
 
 
