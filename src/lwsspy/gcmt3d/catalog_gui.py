@@ -519,15 +519,20 @@ class CatalogExplore:
         counter = 0
         for _w in ['body', 'surface', 'mantle']:
             for _c in ["Z", "R", "T"]:
+
                 counter += 1
                 ax = plt.subplot(3, 3, counter, projection=Mollweide(
                     central_longitude=self.longitude[self.selected_event]))
                 ax.set_global()
                 lmap.plot_map()
-                ax.plot(m[_w][_c]['longitude'], m[_w][_c]['latitude'], 'v',
-                        label="Stations", markeredgecolor='k',
-                        markerfacecolor=(0.8, 0.3, 0.3), transform=PlateCarree())
-                ax.set_title(f"{_w.capitalize()}/{_c}")
+
+                if _w in m:
+                    ax.plot(m[_w][_c]['longitude'], m[_w][_c]['latitude'], 'v',
+                            label="Stations", markeredgecolor='k',
+                            markerfacecolor=(0.8, 0.3, 0.3), transform=PlateCarree())
+                    ax.set_title(f"{_w.capitalize()}/{_c}")
+                else:
+                    ax.set_title(f"{_w.capitalize()}/{_c} not used.")
 
     def onbuttonclick_measurements(self, event):
         self.logger.debug('Button measurements')
