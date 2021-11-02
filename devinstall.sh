@@ -7,7 +7,7 @@ if [ ! -d lwsspy ]
 then
     mkdir lwsspy
 fi
-cd lwsspy-dev
+cd lwsspy
 
 # URLs
 LWSSPY=https://github.com/lwsspy/lwsspy
