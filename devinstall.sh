@@ -10,9 +10,10 @@ fi
 cd lwsspy
 
 # URLs
-LWSSPY=https://github.com/lwsspy/lwsspy
-LWSSPYSEISMO=https://github.com/lwsspy/lwsspy.seismo
-LWSSPYGCMT3D=https://github.com/lwsspy/lwsspy.gcmt3d
+BRANCH=dev
+LWSSPY=git@github.com:lwsspy/lwsspy.git
+LWSSPYSEISMO=git@github.com:lwsspy/lwsspy.seismo.git
+LWSSPYGCMT3D=git@github.com:lwsspy/lwsspy.gcmt3d.git
 
 # Clone all 3 repositories
 git clone $LWSSPY
@@ -21,6 +22,7 @@ git clone $LWSSPYGCMT3D
 
 # Create environment from lwsspy's file
 cd lwsspy
+git checkout $BRANCH
 conda env create -n lwsspy -f environment.yml
 conda activate lwsspy
 pip install -e .
@@ -28,9 +30,11 @@ cd ..
 
 # Install seismic processing tools
 cd lwsspy.seismo
+git checkout $BRANCH
 pip install -e .
 cd ..
 
 # Install gcmt3d package
 cd lwsspy.gcmt3d
+git checkout $BRANCH
 pip install -e .
