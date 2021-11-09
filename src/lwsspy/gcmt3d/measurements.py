@@ -1,10 +1,15 @@
+import os
+from glob import glob
 from typing import Optional
+from future.utils import lmap
 from obspy import UTCDateTime, Stream
 import logging
 import numpy as np
 from lwsspy import plot as lplot
 from lwsspy import signal as lsig
 from lwsspy import seismo as lseis
+from lwsspy import maps as lmap
+from .io import read_measurements_label
 
 
 def get_toffset(
@@ -207,3 +212,98 @@ def get_all_measurements(
             _obs_stream, _syn_stream, event, logger=logger)
 
     return window_dict
+
+
+def get_measurement_N(
+        database0: str, label0: str,
+        database1: str, label1: str,
+        v: bool = True):
+    """Takes in databse locations and labels to create a table that contains
+    measurement count vs. parameter change.
+
+    Parameters
+    ----------
+    database0 : str
+        Starting database
+    label0 : str
+        label of starting solution
+    database1 : str
+        Final database
+    label1 : str
+        label of final solution
+    v : bool, optional
+        flag to turn on verbose output
+    Returns
+    -------
+    Arraylike table
+        CID, ddepth, dM0, dcmt, dx, *[measurement counts for wave types]
+
+    """
+
+    # Get all cmtfiles
+    cmtfiles1 = glob(os.path.join(database1, f"*/*_{label1}"))
+    N = len(cmtfiles1)
+
+    # Create catalogs
+    cat1 = lseis.CMTCatalog(cmtfiles1)
+
+    # Waves and components
+    mtype = 'dlna'  # placeholder measurement
+    waves = ['body', 'surface', 'mantle']
+    comps = ['Z', 'R', 'T']
+    wcomb = [f"{w}-{c}" for w in waves for c in comps]
+
+    # Create numpy structure dtype
+    dtypes = np.dtype([
+        ('event', str),
+        ('dz', np.float64),
+        ('dM0', np.float64),
+        ('dt', np.float64),
+        ('dx', np.float64),
+        *[(wc, np.float64) for wc in wcomb]
+    ])
+
+    Nm = []
+    for cmtfile1 in cmtfiles1:
+
+        if v:
+            print(f"Adding {cmtfile1} ...")
+
+        # Load Final solution
+        cmt1 = lseis.CMTSource.from_CMTSOLUTION_file(cmtfile1)
+
+        # Create Filename for the start solution and load it
+        cmtfile0 = os.path.join(
+            database0, cmt1.eventname, f"{cmt1.eventname}_{label0}")
+        cmt0 = lseis.CMTSource.from_CMTSOLUTION_file(cmtfile0)
+
+        # Compute changes
+        dz = (cmt1.depth_in_m - cmt0.depth_in_m)/1000.0
+        dt = cmt1.time_shift - cmt0.time_shift
+        dM0 = (cmt1.M0 - cmt0.M0)/cmt0.M0
+        dx = lmap.haversine(
+            cmt0.longitude, cmt0.latitude, cmt1.longitude, cmt1.latitude)
+
+        # Get number of measurements involved
+        d = read_measurements_label(os.path.dirname(cmtfile1), label1)
+
+        # Empty list to be used for the table
+        mlist = 9 * [np.nan]
+
+        # Fill if possible
+        if isinstance(d, dict):
+
+            counter = 0
+            for w in ['body', 'surface', 'mantle']:
+                if w not in d:
+                    counter += 3
+                    continue
+                for c in ['R', 'T', 'Z']:
+                    mlist[counter] = len(d[w][c][mtype])
+                    counter += 1
+
+        Nm.append(
+            (cmt1.eventname, dz, dM0, dt, dx, *mlist)
+        )
+
+    return np.array(Nm, dtype=dtypes)
