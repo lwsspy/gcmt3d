@@ -5,11 +5,13 @@ from future.utils import lmap
 from obspy import UTCDateTime, Stream
 import logging
 import numpy as np
+import pandas as pd
 from lwsspy import plot as lplot
 from lwsspy import signal as lsig
 from lwsspy import seismo as lseis
 from lwsspy import maps as lmap
-from .io import read_measurements_label
+
+from .io import read_measurements_label, get_event_files
 
 
 def get_toffset(
@@ -217,6 +219,7 @@ def get_all_measurements(
 def get_measurement_N(
         database0: str, label0: str,
         database1: str, label1: str,
+        mlabel0: str = None, mlabel1: str = None,
         v: bool = True):
     """Takes in databse locations and labels to create a table that contains
     measurement count vs. parameter change.
@@ -227,10 +230,15 @@ def get_measurement_N(
         Starting database
     label0 : str
         label of starting solution
+    mlabel0 : str, optional,
+        if the starting label of the measurement differs from the one of the
+        solution
     database1 : str
         Final database
     label1 : str
         label of final solution
+    mlabel1 : str, optional
+        if the final measurement label differs from the cmtfile one
     v : bool, optional
         flag to turn on verbose output
     Returns
@@ -240,12 +248,28 @@ def get_measurement_N(
 
     """
 
+    # Set labels if not provided
+    if not mlabel0:
+        mlabel0 = label0
+
+    if not mlabel1:
+        mlabel1 = label1
+
     # Get all cmtfiles
-    cmtfiles1 = glob(os.path.join(database1, f"*/*_{label1}"))
-    N = len(cmtfiles1)
+    if v:
+        print("Get events...")
+    cmtfiles0 = get_event_files(database0, label0)
+    cmtfiles1 = get_event_files(database1, label1)
 
     # Create catalogs
-    cat1 = lseis.CMTCatalog(cmtfiles1)
+    if v:
+        print("Create Catalogs...")
+    cat0 = lseis.CMTCatalog.from_file_list(cmtfiles0)
+    cat1 = lseis.CMTCatalog.from_file_list(cmtfiles1)
+
+    if v:
+        print("Check ids...")
+    cat0, cat1 = cat0.check_ids(cat1)
 
     # Waves and components
     mtype = 'dlna'  # placeholder measurement
@@ -254,28 +278,13 @@ def get_measurement_N(
     wcomb = [f"{w}-{c}" for w in waves for c in comps]
 
     # Create numpy structure dtype
-    dtypes = np.dtype([
-        ('event', str),
-        ('dz', np.float64),
-        ('dM0', np.float64),
-        ('dt', np.float64),
-        ('dx', np.float64),
-        *[(wc, np.float64) for wc in wcomb]
-    ])
+    columns = ['event', 'date', 'dz', 'dM0', 'dt', 'dx', *wcomb]
 
     Nm = []
-    for cmtfile1 in cmtfiles1:
 
+    for cmt0, cmt1 in zip(cat0, cat1):
         if v:
-            print(f"Adding {cmtfile1} ...")
-
-        # Load Final solution
-        cmt1 = lseis.CMTSource.from_CMTSOLUTION_file(cmtfile1)
-
-        # Create Filename for the start solution and load it
-        cmtfile0 = os.path.join(
-            database0, cmt1.eventname, f"{cmt1.eventname}_{label0}")
-        cmt0 = lseis.CMTSource.from_CMTSOLUTION_file(cmtfile0)
+            print(f"Adding {cmt0.eventname} ...")
 
         # Compute changes
         dz = (cmt1.depth_in_m - cmt0.depth_in_m)/1000.0
@@ -285,7 +294,8 @@ def get_measurement_N(
             cmt0.longitude, cmt0.latitude, cmt1.longitude, cmt1.latitude)
 
         # Get number of measurements involved
-        d = read_measurements_label(os.path.dirname(cmtfile1), label1)
+        d = read_measurements_label(
+            os.path.join(database1, cmt1.eventname),  mlabel1)
 
         # Empty list to be used for the table
         mlist = 9 * [np.nan]
@@ -294,16 +304,16 @@ def get_measurement_N(
         if isinstance(d, dict):
 
             counter = 0
-            for w in ['body', 'surface', 'mantle']:
+            for w in waves:
                 if w not in d:
                     counter += 3
                     continue
-                for c in ['R', 'T', 'Z']:
+                for c in comps:
                     mlist[counter] = len(d[w][c][mtype])
                     counter += 1
 
         Nm.append(
-            (cmt1.eventname, dz, dM0, dt, dx, *mlist)
+            (cmt1.eventname, cmt1.cmt_time.matplotlib_date, dz, dM0, dt, dx, *mlist)
         )
 
-    return np.array(Nm, dtype=dtypes)
+    return pd.DataFrame(Nm, columns=columns)

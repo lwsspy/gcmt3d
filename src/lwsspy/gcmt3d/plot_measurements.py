@@ -1,6 +1,7 @@
 # External
 import _pickle as cPickle
 import matplotlib
+from matplotlib.cm import ScalarMappable
 from matplotlib.lines import Line2D
 from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
@@ -10,11 +11,15 @@ from copy import deepcopy
 from glob import glob
 from typing import Optional
 import os
+import matplotlib.dates as mdates
+import pandas as pd
+
 # Internal
 from lwsspy import plot as lplt
 from lwsspy import base as lbase
 from lwsspy import seismo as lseis
 from lwsspy import math as lmat
+from pandas.core.frame import DataFrame
 
 lplt.updaterc()
 
@@ -717,3 +722,106 @@ def bin_plot_pickles():
 
     if args.outdir is not None:
         plt.switch_backend(backend)
+
+
+def colorbar_yrmonth(ax, x: bool = True):
+    from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
+
+    # Get locators and formatters
+    years = YearLocator()   # every year
+    months = MonthLocator()  # every month
+    yearsFmt = DateFormatter('%Y')
+
+    # Add to axis
+    if x:
+        ax.xaxis.set_major_locator(years)
+        ax.xaxis.set_major_formatter(yearsFmt)
+        ax.xaxis.set_minor_locator(months)
+    else:
+        ax.yaxis.set_major_locator(years)
+        ax.yaxis.set_major_formatter(yearsFmt)
+        ax.yaxis.set_minor_locator(months)
+
+
+def plot_measurement_summary(table: DataFrame, wcomb, tcb: bool = False):
+
+    measurements = ['dz', 'dM0', 'dx', 'dt']
+    labels = ['$\Delta$z', '$\Delta M_0$/$M_0$',
+              '$\Delta$x', '$\Delta$t']
+    units = ['km', None, 'km', 's']
+    xlims = [[-30, +30], [-3, +3], [0, 100], [-7.5, +7.5]]
+
+    marker = 'o'
+    size = 2.5
+    cmap = 'rainbow'
+    years = pd.DatetimeIndex(
+        mdates.num2date(
+            table['date'].to_numpy()
+        )
+    ).year.to_numpy()
+    bnds = np.arange(np.min(years), np.max(years)+1)
+    norm = colors.BoundaryNorm(bnds, plt.get_cmap(cmap).N)
+    Ntot = np.sum(table[wcomb].to_numpy(), axis=1)
+
+    # Figure
+    fig = plt.figure(figsize=(9, 3.0))
+    plt.subplots_adjust(wspace=0.4, left=0.05, right=0.95)
+    axes = []
+    axes.append(plt.subplot(1, 4, 1))
+    plt.scatter(table['dz'], Ntot, s=size,
+                c=years, marker=marker, cmap=cmap, norm=norm)
+    plt.xlabel('$\Delta$z [km]')
+    plt.xlim(xlims[0])
+    plt.ylabel('N')
+    axes.append(plt.subplot(1, 4, 2))
+    plt.scatter(table['dM0'], Ntot, s=size,
+                c=years, marker='o', cmap=cmap, norm=norm)
+    plt.xlabel('$\Delta M_0$/$M_0$')
+    plt.xlim(xlims[1])
+    axes.append(plt.subplot(1, 4, 3))
+    plt.scatter(table['dt'], Ntot, s=size,
+                c=years, marker='o', cmap=cmap, norm=norm)
+    plt.xlabel('$\Delta$t [s]')
+    plt.xlim(xlims[3])
+    axes.append(plt.subplot(1, 4, 4))
+    sc = plt.scatter(table['dx'], Ntot, s=size,
+                     c=years, marker='o', cmap=cmap, norm=norm)
+    plt.xlabel('$\Delta$x [km]')
+    plt.xlim(xlims[2])
+    if tcb:
+        cb = fig.colorbar(sc, orientation='horizontal',
+                          ax=axes, aspect=40, shrink=0.66, pad=0.25)
+        # colorbar_yrmonth(cb.ax)
+
+    plt.savefig('summary.pdf', format='pdf')
+
+    for m, u, l, xl in zip(measurements, units, labels, xlims):
+
+        plt.figure(figsize=(8, 6))
+        plt.subplots_adjust(left=0.075, right=0.925, hspace=0.3)
+        axes = []
+        for _i, wc in enumerate(wcomb):
+
+            # Create Axes
+            axes.append(plt.subplot(3, 3, _i + 1))
+
+            # Plot the scatter for the category
+            sc = plt.scatter(table[m], table[wc], s=size,
+                             c=years, marker='o', cmap=cmap, norm=norm)
+            plt.xlim(xl)
+            # Labels
+            if _i > 5:
+                plt.xlabel(f'[{u}]')
+            if _i < 3:
+                plt.title(wc.split('-')[1].capitalize())
+            if _i in [0, 3, 6]:
+                plt.ylabel(wc.split('-')[0].capitalize())
+
+        plt.suptitle(f'{l}')
+
+        if tcb:
+            cb = fig.colorbar(ScalarMappable(cmap=cmap, norm=norm), orientation='horizontal',
+                              ax=axes, aspect=60, shrink=1.0, pad=0.1)
+            # colorbar_yrmonth(cb.ax)
+
+        plt.savefig(f'meas-{m}.pdf', format='pdf')
