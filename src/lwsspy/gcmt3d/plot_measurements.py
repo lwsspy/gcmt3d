@@ -547,14 +547,15 @@ def get_database_measurements(
 
     # Get all directories
     # cmtlocs = glob(os.path.join(database, '*/measurements*'))
-    cmtlocs = sorted[os.path.join(database, file) for file in os.listdir(database)])
+    cmtlocs = sorted([os.path.join(database, file)
+                     for file in os.listdir(database)])
 
     # Empty measurement lists
-    components=["Z", "R", "T"]
+    components = ["Z", "R", "T"]
     for _cmtloc in cmtlocs:
         print(_cmtloc)
         try:
-            measurement_pickle_before=os.path.join(
+            measurement_pickle_before = os.path.join(
                 _cmtloc, f"measurements_{blabel}.pkl"
             )
             measurement_pickle_after = os.path.join(
