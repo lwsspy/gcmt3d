@@ -553,7 +553,7 @@ def get_database_measurements(
     # Empty measurement lists
     components = ["Z", "R", "T"]
     for _cmtloc in cmtlocs:
-        print(_cmtloc)
+        print(_cmtloc, flush=True)
         try:
             measurement_pickle_before = os.path.join(
                 _cmtloc, f"measurements_{blabel}.pkl"
@@ -567,7 +567,7 @@ def get_database_measurements(
                 measurements_after = cPickle.load(f)
 
         except Exception as e:
-            print(f"{_cmtloc} not used:", e)
+            print(f"{_cmtloc} not used:", e, flush=True)
             continue
 
         if "after" not in locals():
