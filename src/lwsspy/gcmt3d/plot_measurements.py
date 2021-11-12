@@ -546,30 +546,27 @@ def get_database_measurements(
         alabel = "after"
 
     # Get all directories
-    cmtlocs = glob(os.path.join(database, '*/measurements*'))
-    cmtlocs = list(set([os.path.dirname(cmtloc) for cmtloc in cmtlocs]))
-    cmtlocs.sort()
+    # cmtlocs = glob(os.path.join(database, '*/measurements*'))
+    cmtlocs = sorted[os.path.join(database, file) for file in os.listdir(database)])
 
     # Empty measurement lists
-    components = ["Z", "R", "T"]
+    components=["Z", "R", "T"]
     for _cmtloc in cmtlocs:
         print(_cmtloc)
         try:
-            measurement_pickle_before = os.path.join(
+            measurement_pickle_before=os.path.join(
                 _cmtloc, f"measurements_{blabel}.pkl"
             )
             measurement_pickle_after = os.path.join(
                 _cmtloc, f"measurements_{alabel}.pkl"
             )
-            print(measurement_pickle_before)
-            print(measurement_pickle_after)
             with open(measurement_pickle_before, "rb") as f:
                 measurements_before = cPickle.load(f)
             with open(measurement_pickle_after, "rb") as f:
                 measurements_after = cPickle.load(f)
 
         except Exception as e:
-            print(e)
+            print(f"{_cmtloc} not used:", e)
             continue
 
         if "after" not in locals():
