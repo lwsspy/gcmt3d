@@ -383,7 +383,7 @@ def bin_summary():
                         required=False, type=str, default=None)
     parser.add_argument('-v', '--verbose', dest='verbose',
                         help='verbose output',
-                        required=False, type=str, default=None)
+                        required=False, type=bool, default=None)
     parser.add_argument('-c0', '--catalog0', dest='catalog0',
                         help='Start Catalog', required=False, type=str, default=None)
     parser.add_argument('-c1', '--catalog1', dest='catalog1',
