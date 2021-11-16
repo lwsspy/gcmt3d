@@ -382,8 +382,8 @@ def bin_summary():
                         help='label for cmt in dir',
                         required=False, type=str, default=None)
     parser.add_argument('-v', '--verbose', dest='verbose',
-                        help='verbose output',
-                        required=False, type=bool, default=None)
+                        help='verbose output', action='store_true',
+                        required=False, default=False)
     parser.add_argument('-c0', '--catalog0', dest='catalog0',
                         help='Start Catalog', required=False, type=str, default=None)
     parser.add_argument('-c1', '--catalog1', dest='catalog1',
