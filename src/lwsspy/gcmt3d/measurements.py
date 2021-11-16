@@ -220,7 +220,10 @@ def get_measurement_N(
         database0: str, label0: str,
         database1: str, label1: str,
         mlabel0: str = None, mlabel1: str = None,
-        v: bool = True):
+        v: bool = True,
+        outfile: str = None,
+        catalog0: str = None,
+        catalog1: str = None):
     """Takes in databse locations and labels to create a table that contains
     measurement count vs. parameter change.
 
@@ -241,6 +244,13 @@ def get_measurement_N(
         if the final measurement label differs from the cmtfile one
     v : bool, optional
         flag to turn on verbose output
+    outfile : str, optional
+        save to feather file
+    catalog0 : str, optional
+        optional catalog input to not require file search
+    catalog1 : str, optional
+        optional catalog input to not require file search
+
     Returns
     -------
     Arraylike table
@@ -255,17 +265,45 @@ def get_measurement_N(
     if not mlabel1:
         mlabel1 = label1
 
-    # Get all cmtfiles
-    if v:
-        print("Get events...")
-    cmtfiles0 = get_event_files(database0, label0)
-    cmtfiles1 = get_event_files(database1, label1)
+    # Loading or Creating catalog 0
+    if catalog0:
 
-    # Create catalogs
-    if v:
-        print("Create Catalogs...")
-    cat0 = lseis.CMTCatalog.from_file_list(cmtfiles0)
-    cat1 = lseis.CMTCatalog.from_file_list(cmtfiles1)
+        # Create catalogs
+        if v:
+            print("Loading Catalog0...")
+        cat0 = lseis.CMTCatalog.load(catalog0)
+
+    else:
+        # Get all cmtfiles
+        if v:
+            print("Get events for cat 0...")
+        cmtfiles0 = get_event_files(database0, label0)
+
+        # Create catalog
+        if v:
+            print("Create Catalog 0...")
+        cat0 = lseis.CMTCatalog.from_file_list(cmtfiles0)
+    
+    # Loading or Creating catalog 0
+    if catalog1:
+
+        # load catalog
+        if v:
+            print("Loading Catalog1...")
+        cat1 = lseis.CMTCatalog.load(catalog1)
+
+    else:
+
+        # Get cmtfiles 
+        if v:
+            print("Get events for cat 0...")
+        cmtfiles1 = get_event_files(database1, label1)
+
+        # Create catalogs
+        if v:
+            print("Create Catalog 0...")
+        cat1 = lseis.CMTCatalog.from_file_list(cmtfiles1)
+
 
     if v:
         print("Check ids...")
@@ -316,4 +354,53 @@ def get_measurement_N(
             (cmt1.eventname, cmt1.cmt_time.matplotlib_date, dz, dM0, dt, dx, *mlist)
         )
 
-    return pd.DataFrame(Nm, columns=columns)
+    # Create table from measurements
+    df = pd.DataFrame(Nm, columns=columns)
+
+    if outfile:
+        df.to_feather(outfile)
+
+    return  df
+
+
+def bin_summary():
+
+    import argparse
+    import sys
+
+    # Get arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument(dest='database0', help='starting database', type=str)
+    parser.add_argument(dest='label0', help='starting label', type=str)
+    parser.add_argument(dest='database1', help='final database', type=str)
+    parser.add_argument(dest='label1', help='final label', type=str)
+    parser.add_argument(dest='outfile', help='verbose output', type=str)
+    parser.add_argument('-m0', '--mlabel0', dest='mlabel0',
+                        help='label for cmt in dir',
+                        required=False, type=str, default=None)
+    parser.add_argument('-m1', '--mlabel1', dest='mlabel1',
+                        help='label for cmt in dir',
+                        required=False, type=str, default=None)
+    parser.add_argument('-v', '--verbose', dest='verbose',
+                        help='verbose output',
+                        required=False, type=str, default=None)
+    parser.add_argument('-c0', '--catalog0', dest='catalog0',
+                        help='Start Catalog', required=False, type=str, default=None)
+    parser.add_argument('-c1', '--catalog1', dest='catalog1',
+                        help='Final Catalog', required=False, type=str, default=None)
+                
+    args = parser.parse_args()
+
+
+    get_measurement_N(
+        database0=args.database0, 
+        label0=args.label0,
+        database1=args.database1, 
+        label1=args.label1,
+        mlabel0=args.mlabel0, 
+        mlabel1=args.mlabel1,
+        v=args.verbose,
+        outfile=args.outfile,
+        catalog0=args.catalog0,
+        catalog1=args.catalog1,
+    )
