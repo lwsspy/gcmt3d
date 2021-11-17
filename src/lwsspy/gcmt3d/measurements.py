@@ -322,7 +322,7 @@ def get_measurement_N(
 
     for cmt0, cmt1 in zip(cat0, cat1):
         if v:
-            print(f"Adding {cmt0.eventname} ...")
+            print(f"Adding {cmt0.eventname} ...", end='\r')
 
         # Compute changes
         dz = (cmt1.depth_in_m - cmt0.depth_in_m)/1000.0

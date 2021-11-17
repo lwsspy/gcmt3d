@@ -4,6 +4,7 @@ import matplotlib
 from matplotlib.cm import ScalarMappable
 from matplotlib.lines import Line2D
 from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import MultipleLocator
 import matplotlib.pyplot as plt
 from matplotlib import colors
 import numpy as np
@@ -741,16 +742,20 @@ def colorbar_yrmonth(ax, x: bool = True):
         ax.yaxis.set_minor_locator(months)
 
 
-def plot_measurement_summary(table: DataFrame, wcomb, tcb: bool = False):
+def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = False):
+
+    # Get wtype-comp combos
+    wcomb = list(table.columns[-9:])
 
     measurements = ['dz', 'dM0', 'dx', 'dt']
     labels = ['$\Delta$z', '$\Delta M_0$/$M_0$',
               '$\Delta$x', '$\Delta$t']
     units = ['km', None, 'km', 's']
     xlims = [[-30, +30], [-3, +3], [0, 100], [-7.5, +7.5]]
+    # xlims = 4 * [None, None]
 
     marker = 'o'
-    size = 2.5
+    size = 0.25
     cmap = 'rainbow'
     years = pd.DatetimeIndex(
         mdates.num2date(
@@ -761,37 +766,70 @@ def plot_measurement_summary(table: DataFrame, wcomb, tcb: bool = False):
     norm = colors.BoundaryNorm(bnds, plt.get_cmap(cmap).N)
     Ntot = np.sum(table[wcomb].to_numpy(), axis=1)
 
+    # minyear = 1980
+    # maxyear = 2000
+    yearbns = [1990, 2000, 2010, 2015, 2025]
+
     # Figure
-    fig = plt.figure(figsize=(9, 3.0))
-    plt.subplots_adjust(wspace=0.4, left=0.05, right=0.95)
+    fig = plt.figure(figsize=(9, 8.0))
+    plt.subplots_adjust(wspace=0.4, left=0.1, right=0.9, hspace=0.3)
+
     axes = []
-    axes.append(plt.subplot(1, 4, 1))
-    plt.scatter(table['dz'], Ntot, s=size,
-                c=years, marker=marker, cmap=cmap, norm=norm)
-    plt.xlabel('$\Delta$z [km]')
-    plt.xlim(xlims[0])
-    plt.ylabel('N')
-    axes.append(plt.subplot(1, 4, 2))
-    plt.scatter(table['dM0'], Ntot, s=size,
-                c=years, marker='o', cmap=cmap, norm=norm)
-    plt.xlabel('$\Delta M_0$/$M_0$')
-    plt.xlim(xlims[1])
-    axes.append(plt.subplot(1, 4, 3))
-    plt.scatter(table['dt'], Ntot, s=size,
-                c=years, marker='o', cmap=cmap, norm=norm)
-    plt.xlabel('$\Delta$t [s]')
-    plt.xlim(xlims[3])
-    axes.append(plt.subplot(1, 4, 4))
-    sc = plt.scatter(table['dx'], Ntot, s=size,
-                     c=years, marker='o', cmap=cmap, norm=norm)
-    plt.xlabel('$\Delta$x [km]')
-    plt.xlim(xlims[2])
+
+    for i in range(len(yearbns)-1):
+
+        pos = np.where((yearbns[i] < years) & (years <= yearbns[i+1]))[0]
+        minyear, maxyear = np.min(years[pos]), np.max(years[pos])
+        N = len(pos)
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 1))
+        plt.scatter(table['dz'][pos][::-1], Ntot[pos][::-1], s=size,
+                    c=years[pos][::-1], marker=marker, cmap=cmap, norm=norm)
+        plt.xlim(xlims[0])
+        plt.ylabel('N')
+        lplt.plot_label(plt.gca(), f"N: {N}", location=6, box=False)
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta$z [km]')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 2))
+        plt.scatter(table['dM0'][pos][::-1], Ntot[pos][::-1], s=size,
+                    c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
+        plt.xlim(xlims[1])
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta M_0$/$M_0$')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 3))
+        plt.scatter(table['dt'][pos][::-1], Ntot[pos][::-1], s=size,
+                    c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
+        plt.xlim(xlims[3])
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta$t [s]')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 4))
+        sc = plt.scatter(table['dx'][pos][::-1], Ntot[pos][::-1], s=size,
+                         c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
+        plt.xlim(xlims[2])
+        lplt.plot_label(
+            plt.gca(), f"{minyear}-{maxyear}", location=7, box=False)
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta$x [km]')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
     if tcb:
         cb = fig.colorbar(sc, orientation='horizontal',
-                          ax=axes, aspect=40, shrink=0.66, pad=0.25)
-        # colorbar_yrmonth(cb.ax)
+                          ax=axes, aspect=40, shrink=0.75, pad=0.1,
+                          fraction=0.05)
+        xminorLocator = MultipleLocator(1)
+        cb.ax.xaxis.set_minor_locator(xminorLocator)
 
-    plt.savefig('summary.pdf', format='pdf')
+    # plt.savefig('summary.pdf', format='pdf')
+    return
 
     for m, u, l, xl in zip(measurements, units, labels, xlims):
 
@@ -820,6 +858,72 @@ def plot_measurement_summary(table: DataFrame, wcomb, tcb: bool = False):
         if tcb:
             cb = fig.colorbar(ScalarMappable(cmap=cmap, norm=norm), orientation='horizontal',
                               ax=axes, aspect=60, shrink=1.0, pad=0.1)
+            xminorLocator = MultipleLocator(1)
+            cb.ax.xaxis.set_minor_locator(xminorLocator)
             # colorbar_yrmonth(cb.ax)
 
-        plt.savefig(f'meas-{m}.pdf', format='pdf')
+        if save:
+            plt.savefig(f'meas-{m}.pdf', format='pdf')
+
+
+def plot_measurement_summary2(df: DataFrame, tcb: bool = False, save: bool = False):
+
+    fig = plt.figure()
+    plt.subplots_adjust(wspace=0.4, left=0.05, right=0.95,
+                        top=0.975, bottom=0.025)
+    axes = []
+    years = pd.DatetimeIndex(
+        mdates.num2date(
+            df['date'].to_numpy()
+        )
+    ).year.to_numpy()
+    cmap = plt.get_cmap('rainbow')
+    bnds = np.arange(np.min(years), np.max(years)+1)
+    norm = colors.BoundaryNorm(bnds, plt.get_cmap(cmap).N)
+
+    minyear = 2000
+    maxyear = 2030
+
+    pos = np.where((minyear < years) & (years < maxyear))[0]
+
+    # Get wtype-comp combos
+    wcomb = list(df.columns[-9:])
+
+    measurements = ['dz', 'dM0', 'dx', 'dt']
+    labels = ['$\Delta$z', '$\Delta M_0$/$M_0$',
+              '$\Delta$x', '$\Delta$t']
+    units = ['km', '', 'km', 's']
+    xlims = [[-30, +30], [-3, +3], [0, 100], [-7.5, +7.5]]
+
+    size = 0.1
+
+    for i, comb0 in enumerate(measurements):
+        for j, comb1 in enumerate(wcomb[-9:]):
+            # if j>i:
+            #    continue
+            ax = plt.subplot(4, 9, 9*i+j+1)
+            axes.append(ax)
+
+            if i == j:
+                plt.hist(df[comb0].iloc[pos], np.linspace(*xlims[i], 100), density=True,
+                         orientation='horizontal')
+                plt.ylim(xlims[i])
+            else:
+                plt.scatter(df[comb1].iloc[pos].iloc[::-1], df[comb0].iloc[pos].iloc[::-1],
+                            c=years[pos][::-1], s=size, cmap=cmap, norm=norm)
+                plt.ylim(xlims[i])
+            if i == 3:
+                plt.xlabel(f"{comb1.capitalize()}")
+            if j == 0:
+                plt.ylabel(f"{labels[i]} {units[i]}")
+            print(comb0, comb1)
+
+    if tcb:
+        cb = fig.colorbar(ScalarMappable(cmap=cmap, norm=norm),
+                          orientation='horizontal',
+                          ax=axes, aspect=60, shrink=1.0, pad=0.1, fraction=0.1)
+        xminorLocator = MultipleLocator(1)
+        cb.ax.xaxis.set_minor_locator(xminorLocator)
+
+    if save:
+        plt.savefig(f'meas-summary.pdf', format='pdf')

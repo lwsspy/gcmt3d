@@ -1211,15 +1211,6 @@ class GCMT3DInversion:
             self.model = model * self.scale
             self.scaled_model = model
 
-        # elif self.zero_trace and self.zero_energy:
-        #     mu = model[-2:]
-        #     self.model = model[:-2] * self.scale
-        #     self.scaled_model = model[:-2]
-        # elif not self.zero_trace and self.zero_energy:
-        #     mu = model[-1]
-        #     self.model = model[:-1] * self.scale
-        #     self.scaled_model = model[:-1]
-
         # Write sources for next iteration
         self.__write_sources__()
 
@@ -1250,10 +1241,6 @@ class GCMT3DInversion:
         # Normalize the cost using the first cost calculation
         cost /= self.cost_norm
 
-        # Compute the log energy cost grad and hessian
-        # if self.zero_energy:
-        #     c_log = self.__compute_cost_log__()
-        #     g_log, h_log = self.__compute_gradient_and_hessian_log__()
 
         self.logger.debug("Raw")
         self.logger.debug(f"C: {cost}")
@@ -1754,6 +1741,50 @@ class GCMT3DInversion:
                 filename = os.path.join(syntdir_init, f"{_wtype}_stream.pkl")
                 with open(filename, 'wb') as f:
                     cPickle.dump(self.synt_dict_init[_wtype]["synt"], f)
+
+    def adjust_damping(self,data: dict, synt: dict):
+        """Adjusts damping for events with a low measurement count."""
+
+        # Get all the measurements
+        window_dict = get_all_measurements(
+            data, synt, self.cmtsource, logger=self.logger)
+    
+        # Waves and components
+        mtype = 'dlna'  # placeholder measurement
+        waves = ['body', 'surface', 'mantle']
+        comps = ['Z', 'R', 'T']
+        
+        # Empty list
+        mlist = 9 * [np.nan] 
+        
+        # Loop over waves
+        for w in waves:
+            
+            # Continue if not available
+            if w not in d:
+                counter += 3
+                continue
+            
+            # Loop over components
+            for c in comps:
+                mlist[counter] = len(window_dict[w][c][mtype])
+                counter += 1
+
+        # Check total number of measurements made
+        NM = np.nansum(mlist)
+
+        # Set threshold for damping
+        threshold1 = 250 
+        threshold0 = 500
+
+        # If measurements are very low increase the damping a lot
+        if NM < threshold1:
+            self.hypo_damping *= 100.0
+
+        # If measurements are low but not crazy low increase dmaping a little
+        elif NM < threshold0:
+            self.hypo_damping *= 10.0
+
 
     def write_measurements(
             self, data: dict, synt: dict, post_fix: str = None):
