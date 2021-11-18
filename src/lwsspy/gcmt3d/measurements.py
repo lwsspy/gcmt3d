@@ -283,7 +283,7 @@ def get_measurement_N(
         if v:
             print("Create Catalog 0...")
         cat0 = lseis.CMTCatalog.from_file_list(cmtfiles0)
-    
+
     # Loading or Creating catalog 0
     if catalog1:
 
@@ -294,7 +294,7 @@ def get_measurement_N(
 
     else:
 
-        # Get cmtfiles 
+        # Get cmtfiles
         if v:
             print("Get events for cat 0...")
         cmtfiles1 = get_event_files(database1, label1)
@@ -303,7 +303,6 @@ def get_measurement_N(
         if v:
             print("Create Catalog 0...")
         cat1 = lseis.CMTCatalog.from_file_list(cmtfiles1)
-
 
     if v:
         print("Check ids...")
@@ -360,7 +359,7 @@ def get_measurement_N(
     if outfile:
         df.to_feather(outfile)
 
-    return  df
+    return df
 
 
 def bin_summary():
@@ -388,16 +387,15 @@ def bin_summary():
                         help='Start Catalog', required=False, type=str, default=None)
     parser.add_argument('-c1', '--catalog1', dest='catalog1',
                         help='Final Catalog', required=False, type=str, default=None)
-                
+
     args = parser.parse_args()
 
-
     get_measurement_N(
-        database0=args.database0, 
+        database0=args.database0,
         label0=args.label0,
-        database1=args.database1, 
+        database1=args.database1,
         label1=args.label1,
-        mlabel0=args.mlabel0, 
+        mlabel0=args.mlabel0,
         mlabel1=args.mlabel1,
         v=args.verbose,
         outfile=args.outfile,

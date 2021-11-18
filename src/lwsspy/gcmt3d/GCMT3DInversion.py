@@ -1241,7 +1241,6 @@ class GCMT3DInversion:
         # Normalize the cost using the first cost calculation
         cost /= self.cost_norm
 
-
         self.logger.debug("Raw")
         self.logger.debug(f"C: {cost}")
         self.logger.debug("G:")
@@ -1742,29 +1741,30 @@ class GCMT3DInversion:
                 with open(filename, 'wb') as f:
                     cPickle.dump(self.synt_dict_init[_wtype]["synt"], f)
 
-    def adjust_damping(self,data: dict, synt: dict):
+    def adjust_damping(self):
         """Adjusts damping for events with a low measurement count."""
 
         # Get all the measurements
-        window_dict = get_all_measurements(
-            data, synt, self.cmtsource, logger=self.logger)
-    
+        d = get_all_measurements(
+            self.data_dict, self.synt_dict_init, self.cmtsource, logger=self.logger)
+
         # Waves and components
         mtype = 'dlna'  # placeholder measurement
         waves = ['body', 'surface', 'mantle']
         comps = ['Z', 'R', 'T']
-        
+
         # Empty list
-        mlist = 9 * [np.nan] 
-        
+        mlist = 9 * [np.nan]
+
+        counter = 0
         # Loop over waves
         for w in waves:
-            
+
             # Continue if not available
             if w not in d:
                 counter += 3
                 continue
-            
+
             # Loop over components
             for c in comps:
                 mlist[counter] = len(window_dict[w][c][mtype])
@@ -1773,10 +1773,6 @@ class GCMT3DInversion:
         # Check total number of measurements made
         NM = np.nansum(mlist)
 
-        # Set threshold for damping
-        threshold1 = 250 
-        threshold0 = 500
-
         # If measurements are very low increase the damping a lot
         if NM < threshold1:
             self.hypo_damping *= 100.0
@@ -1784,7 +1780,6 @@ class GCMT3DInversion:
         # If measurements are low but not crazy low increase dmaping a little
         elif NM < threshold0:
             self.hypo_damping *= 10.0
-
 
     def write_measurements(
             self, data: dict, synt: dict, post_fix: str = None):
@@ -2149,6 +2144,7 @@ def bin():
     gcmt3d.process_data()
     gcmt3d.get_windows()
     gcmt3d.__compute_weights__()
+    gcmt3d.adjust_damping()
 
     optim_list = []
 
