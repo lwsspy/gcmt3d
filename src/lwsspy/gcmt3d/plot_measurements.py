@@ -751,11 +751,16 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
     labels = ['$\Delta$z', '$\Delta M_0$/$M_0$',
               '$\Delta$x', '$\Delta$t']
     units = ['km', None, 'km', 's']
-    xlims = [[-30, +30], [-3, +3], [0, 100], [-7.5, +7.5]]
+    xlims = [[-30, +30], [-1, +1], [0, 50], [-5.0, 5.0]]
+    xlims = [[-30, +30], [-1, +1], [0, 50], [-5.0, 5.0]]
+    # xlims = [[-100, +100], [-200, +200], [0, 300], [-30, +30]]
     # xlims = 4 * [None, None]
 
     marker = 'o'
-    size = 0.25
+    if len(table) < 100:
+        size = 3
+    else:
+        size = 0.25
     cmap = 'rainbow'
     years = pd.DatetimeIndex(
         mdates.num2date(
@@ -779,10 +784,14 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
     for i in range(len(yearbns)-1):
 
         pos = np.where((yearbns[i] < years) & (years <= yearbns[i+1]))[0]
+        if len(pos) == 0:
+            continue
+        else:
+            print(len(pos))
         minyear, maxyear = np.min(years[pos]), np.max(years[pos])
         N = len(pos)
         axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 1))
-        plt.scatter(table['dz'][pos][::-1], Ntot[pos][::-1], s=size,
+        plt.scatter(table['dz'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
                     c=years[pos][::-1], marker=marker, cmap=cmap, norm=norm)
         plt.xlim(xlims[0])
         plt.ylabel('N')
@@ -793,7 +802,7 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
             plt.gca().tick_params(labelbottom=False)
 
         axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 2))
-        plt.scatter(table['dM0'][pos][::-1], Ntot[pos][::-1], s=size,
+        plt.scatter(table['dM0'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
                     c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
         plt.xlim(xlims[1])
         if i == len(yearbns)-2:
@@ -802,7 +811,7 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
             plt.gca().tick_params(labelbottom=False)
 
         axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 3))
-        plt.scatter(table['dt'][pos][::-1], Ntot[pos][::-1], s=size,
+        plt.scatter(table['dt'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
                     c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
         plt.xlim(xlims[3])
         if i == len(yearbns)-2:
@@ -811,7 +820,7 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
             plt.gca().tick_params(labelbottom=False)
 
         axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 4))
-        sc = plt.scatter(table['dx'][pos][::-1], Ntot[pos][::-1], s=size,
+        sc = plt.scatter(table['dx'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
                          c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
         plt.xlim(xlims[2])
         lplt.plot_label(
@@ -823,7 +832,7 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
 
     if tcb:
         cb = fig.colorbar(sc, orientation='horizontal',
-                          ax=axes, aspect=40, shrink=0.75, pad=0.1,
+                          ax=axes, aspect=40, shrink=0.75, pad=0.15,
                           fraction=0.05)
         xminorLocator = MultipleLocator(1)
         cb.ax.xaxis.set_minor_locator(xminorLocator)
@@ -868,10 +877,6 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
 
 def plot_measurement_summary2(df: DataFrame, tcb: bool = False, save: bool = False):
 
-    fig = plt.figure()
-    plt.subplots_adjust(wspace=0.4, left=0.05, right=0.95,
-                        top=0.975, bottom=0.025)
-    axes = []
     years = pd.DatetimeIndex(
         mdates.num2date(
             df['date'].to_numpy()
@@ -880,11 +885,6 @@ def plot_measurement_summary2(df: DataFrame, tcb: bool = False, save: bool = Fal
     cmap = plt.get_cmap('rainbow')
     bnds = np.arange(np.min(years), np.max(years)+1)
     norm = colors.BoundaryNorm(bnds, plt.get_cmap(cmap).N)
-
-    minyear = 2000
-    maxyear = 2030
-
-    pos = np.where((minyear < years) & (years < maxyear))[0]
 
     # Get wtype-comp combos
     wcomb = list(df.columns[-9:])
@@ -897,33 +897,104 @@ def plot_measurement_summary2(df: DataFrame, tcb: bool = False, save: bool = Fal
 
     size = 0.1
 
-    for i, comb0 in enumerate(measurements):
-        for j, comb1 in enumerate(wcomb[-9:]):
-            # if j>i:
-            #    continue
-            ax = plt.subplot(4, 9, 9*i+j+1)
-            axes.append(ax)
+    yearbns = [1990, 2025]
 
-            if i == j:
-                plt.hist(df[comb0].iloc[pos], np.linspace(*xlims[i], 100), density=True,
-                         orientation='horizontal')
-                plt.ylim(xlims[i])
-            else:
+    for i in range(len(yearbns)-1):
+
+        fig = plt.figure(figsize=(12, 6))
+        plt.subplots_adjust(wspace=0.4, left=0.05, right=0.95,
+                            top=0.925, bottom=0.025)
+        axes = []
+
+        pos = np.where((yearbns[i] < years) & (years <= yearbns[i+1]))[0]
+        minyear, maxyear = np.min(years[pos]), np.max(years[pos])
+        N = len(pos)
+
+        for i, comb0 in enumerate(measurements):
+            for j, comb1 in enumerate(wcomb[-9:]):
+                # if j>i:
+                #    continue
+                ax = plt.subplot(4, 9, 9*i+j+1)
+                axes.append(ax)
+
+                # if i == j:
+                # plt.hist(df[comb0].iloc[pos], np.linspace(*xlims[i], 100), density=True,
+                #          orientation='horizontal')
+                # plt.ylim(xlims[i])
+                # else:
                 plt.scatter(df[comb1].iloc[pos].iloc[::-1], df[comb0].iloc[pos].iloc[::-1],
                             c=years[pos][::-1], s=size, cmap=cmap, norm=norm)
                 plt.ylim(xlims[i])
-            if i == 3:
-                plt.xlabel(f"{comb1.capitalize()}")
-            if j == 0:
-                plt.ylabel(f"{labels[i]} {units[i]}")
-            print(comb0, comb1)
+                if i == 3:
+                    plt.xlabel(f"{comb1.capitalize()}")
+                else:
+                    pass
+                    ax.tick_params(labelbottom=False)
+                if j == 0:
+                    plt.ylabel(f"{labels[i]} [{units[i]}]")
+                else:
+                    ax.tick_params(labelleft=False)
+                print(comb0, comb1)
 
-    if tcb:
-        cb = fig.colorbar(ScalarMappable(cmap=cmap, norm=norm),
-                          orientation='horizontal',
-                          ax=axes, aspect=60, shrink=1.0, pad=0.1, fraction=0.1)
-        xminorLocator = MultipleLocator(1)
-        cb.ax.xaxis.set_minor_locator(xminorLocator)
+        fig.suptitle(f"{minyear}-{maxyear}")
+        if tcb:
+            cb = fig.colorbar(ScalarMappable(cmap=cmap, norm=norm),
+                              orientation='horizontal',
+                              ax=axes, aspect=60, shrink=1.0, pad=0.1, fraction=0.1)
+            xminorLocator = MultipleLocator(1)
+            cb.ax.xaxis.set_minor_locator(xminorLocator)
 
-    if save:
-        plt.savefig(f'meas-summary.pdf', format='pdf')
+        if save:
+            plt.savefig(f'meas-summary.pdf', format='pdf')
+
+
+def filter_events(df):
+
+    # Get wtype-comp combos
+    wcomb = list(df.columns[-9:])
+
+    # Get total number of measurement
+    Ntot = np.sum(df[wcomb].to_numpy(), axis=1)
+
+    # Get Years
+    years = pd.DatetimeIndex(mdates.num2date(
+        df['date'].to_numpy())).year.to_numpy()
+
+    # Get first section
+    sec0 = np.where((years < 2003) & (Ntot < 200))[0]
+    sec1 = np.where((years >= 2002) & (Ntot < 50))[0]
+    pos = np.hstack((sec1, sec0))
+    #
+
+    return df.iloc[pos]
+
+
+def filter_good_outliers(df):
+
+    # Get wtype-comp combos
+    wcomb = list(df.columns[-9:])
+
+    # Get total number of measurement
+    Ntot = np.sum(df[wcomb].to_numpy(), axis=1)
+
+    # Get Years
+    years = pd.DatetimeIndex(mdates.num2date(
+        df['date'].to_numpy())).year.to_numpy()
+
+    # Get first section
+    dz = np.where((Ntot > 1000) & (np.abs(df['dz']) > 15))[0]
+    dM0 = np.where((Ntot > 1000) & (np.abs(df['dM0']) > 0.4))[0]
+    dx = np.where((Ntot > 1000) & (df['dx'] > 20))[0]
+    dt = np.where((Ntot > 1000) & (np.abs(df['dt']) > 3))[0]
+
+    print('dz:  ', len(dz))
+    print('dM0: ', len(dM0))
+    print('dx:  ', len(dx))
+    print('dt:  ', len(dt))
+
+    pos, c = np.unique(np.hstack((dz, dM0, dx, dt)), return_counts=True)
+    d = pos[c > 1][0]
+
+    print("Ntot: ", Ntot[pos])
+    print("overlap", df['event'].iloc[d])
+    return df.iloc[pos]

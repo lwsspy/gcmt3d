@@ -1668,12 +1668,12 @@ class GCMT3DInversion:
                 with open(filename, 'wb') as f:
                     cPickle.dump(self.synt_dict_init[_wtype]["synt"], f)
 
-    def adjust_damping(self, data: dict, synt: dict):
+    def adjust_damping(self):
         """Adjusts damping for events with a low measurement count."""
 
         # Get all the measurements
-        window_dict = get_all_measurements(
-            data, synt, self.cmtsource, logger=self.logger)
+        d = get_all_measurements(
+            self.data_dict, self.synt_dict_init, self.cmtsource, logger=self.logger)
 
         # Waves and components
         mtype = 'dlna'  # placeholder measurement
@@ -1683,6 +1683,7 @@ class GCMT3DInversion:
         # Empty list
         mlist = 9 * [np.nan]
 
+        counter = 0
         # Loop over waves
         for w in waves:
 
@@ -1698,10 +1699,6 @@ class GCMT3DInversion:
 
         # Check total number of measurements made
         NM = np.nansum(mlist)
-
-        # Set threshold for damping
-        threshold1 = 250
-        threshold0 = 500
 
         # If measurements are very low increase the damping a lot
         if NM < threshold1:
@@ -2074,6 +2071,7 @@ def bin():
     gcmt3d.process_data()
     gcmt3d.get_windows()
     gcmt3d.__compute_weights__()
+    gcmt3d.adjust_damping()
 
     optim_list = []
 
