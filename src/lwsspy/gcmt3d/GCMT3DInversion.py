@@ -1203,8 +1203,7 @@ class GCMT3DInversion:
     def compute_cost_gradient_hessian(self, model):
 
         # Update model
-        if self.zero_trace:  # and not self.zero_energy:
-            # mu = model[-1]
+        if self.zero_trace:
             self.model = model[:-1] * self.scale
             self.scaled_model = model[:-1]
         else:
@@ -1216,7 +1215,7 @@ class GCMT3DInversion:
 
         # Run the simulations
         if self.iteration == 0:
-            pass
+            pass  # First set of forward simulations where run when for windowing
         else:
             with lutils.Timer(plogger=self.logger.info):
                 self.__run_simulations__()
@@ -1241,7 +1240,6 @@ class GCMT3DInversion:
         # Normalize the cost using the first cost calculation
         cost /= self.cost_norm
 
-
         self.logger.debug("Raw")
         self.logger.debug(f"C: {cost}")
         self.logger.debug("G:")
@@ -1253,11 +1251,6 @@ class GCMT3DInversion:
         g *= self.scale
         h = np.diag(self.scale) @ h @ np.diag(self.scale)
 
-        # Scaling the log energy cost grad and hessian
-        # if self.zero_energy:
-        #     g_log *= self.scale
-        #     h_log = np.diag(self.scale) @ h_log @ np.diag(self.scale)
-
         self.logger.debug("Scaled")
         self.logger.debug(f"C: {cost}")
         self.logger.debug("G:")
@@ -1267,12 +1260,12 @@ class GCMT3DInversion:
 
         if self.damping > 0.0:
             factor = self.damping * np.max(np.abs((np.diag(h))))
-            self.logger.debug(f"f: {factor}")
             modelres = self.scaled_model - self.init_scaled_model
+
+            self.logger.debug(f"f: {factor}")
             self.logger.debug(f"Model Residual: {modelres.flatten()}")
-            self.logger.debug(f"Cost Before: {cost}")
-            # cost += factor/2 * np.sum(modelres**2)
-            self.logger.debug(f"Cost After: {cost}")
+            self.logger.debug(f"Cost: {cost}")
+
             g += factor * modelres
             h += factor * np.eye(len(self.model))
 
@@ -1284,19 +1277,20 @@ class GCMT3DInversion:
             self.logger.debug(h.flatten())
 
         elif self.hypo_damping > 0.0:
+
             # Only get the hessian elements of the hypocenter
             hdiag = np.diag(h)[self.hypo_damp_index_array]
+            factor = self.hypo_damping * np.max(np.abs((hdiag)))
+            modelres = self.scaled_model - self.init_scaled_model
+
             self.logger.debug("HypoDiag:")
             self.logger.debug(hdiag)
             self.logger.debug("HypoDamping:")
             self.logger.debug(self.hypo_damping)
-            factor = self.hypo_damping * np.max(np.abs((hdiag)))
             self.logger.debug(f"f: {factor}")
-            modelres = self.scaled_model - self.init_scaled_model
             self.logger.debug(f"Model Residual: {modelres.flatten()}")
-            self.logger.debug(f"Cost Before: {cost}")
-            # cost += factor/2 * np.sum(modelres**2)
-            self.logger.debug(f"Cost After: {cost}")
+
+            # Add damping
             g += factor * modelres
             h += factor * np.diag(self.hypo_damp_array)
 
@@ -1317,30 +1311,6 @@ class GCMT3DInversion:
             h = hz
             g = np.append(g, 0.0)
             g[-1] = np.sum(self.scaled_model[self.zero_trace_index_array])
-
-        # elif self.zero_trace and self.zero_energy:
-        #     m, n = h.shape
-        #     hz = np.zeros((m+2, n+2))
-        #     hz[:-2, :-2] = h + 1 * h_log
-        #     hz[:, -2] = self.zero_trace_array
-        #     hz[-2, :] = self.zero_trace_array
-        #     hz[:-2, -1] = g_log
-        #     hz[-1, :-2] = g_log
-        #     h = hz
-        #     g = np.append(g, 0.0)
-        #     g = np.append(g, 0.0)
-        #     g[-2] = np.sum(self.scaled_model[self.zero_trace_index_array])
-        #     g[-1] = c_log
-
-        # elif not self.zero_trace and self.zero_energy:
-        #     m, n = h.shape
-        #     hz = np.zeros((m+1, n+1))
-        #     hz[:-1, :-1] = h
-        #     hz[:-1, -1] = g_log
-        #     hz[-1, :-1] = g_log
-        #     h = hz
-        #     g = np.append(g, 0.0)
-        #     g[-1] = c_log
 
             # Show stuf when debugging
             self.logger.debug("Constrained:")
@@ -1426,50 +1396,6 @@ class GCMT3DInversion:
                 dsyn=dsyn,
                 verbose=True if self.loglevel >= 20 else False,
                 normalize=self.normalize,
-                weight=self.weighting)
-
-            tmp_g, tmp_h = cgh.grad_and_hess()
-            gradient += tmp_g * self.processdict[_wtype]["weight"]
-            hessian += tmp_h * self.processdict[_wtype]["weight"]
-
-        self.logger.debug("M, G, H:")
-        self.logger.debug(self.model)
-        self.logger.debug(gradient.flatten())
-        self.logger.debug(hessian.flatten())
-
-        return gradient, hessian
-
-    def __compute_cost_log__(self):
-
-        cost = 0
-        for _wtype in self.processdict.keys():
-
-            cgh = lseis.CostGradHessLogEnergy(
-                data=self.data_dict[_wtype],
-                synt=self.synt_dict[_wtype]["synt"],
-                verbose=True if self.loglevel >= 20 else False,
-                weight=self.weighting)
-            cost += cgh.cost() * self.processdict[_wtype]["weight"]
-        return cost
-
-    def __compute_gradient_and_hessian_log__(self):
-
-        gradient = np.zeros_like(self.model)
-        hessian = np.zeros((len(self.model), len(self.model)))
-
-        for _wtype in self.processdict.keys():
-
-            # Get all perturbations
-            dsyn = list()
-            for _i, _par in enumerate(self.pardict.keys()):
-                dsyn.append(self.synt_dict[_wtype][_par])
-
-            # Create costgradhess class to computte gradient
-            cgh = lseis.CostGradHessLogEnergy(
-                data=self.data_dict[_wtype],
-                synt=self.synt_dict[_wtype]["synt"],
-                dsyn=dsyn,
-                verbose=True if self.loglevel >= 20 else False,
                 weight=self.weighting)
 
             tmp_g, tmp_h = cgh.grad_and_hess()
@@ -1742,29 +1668,29 @@ class GCMT3DInversion:
                 with open(filename, 'wb') as f:
                     cPickle.dump(self.synt_dict_init[_wtype]["synt"], f)
 
-    def adjust_damping(self,data: dict, synt: dict):
+    def adjust_damping(self, data: dict, synt: dict):
         """Adjusts damping for events with a low measurement count."""
 
         # Get all the measurements
         window_dict = get_all_measurements(
             data, synt, self.cmtsource, logger=self.logger)
-    
+
         # Waves and components
         mtype = 'dlna'  # placeholder measurement
         waves = ['body', 'surface', 'mantle']
         comps = ['Z', 'R', 'T']
-        
+
         # Empty list
-        mlist = 9 * [np.nan] 
-        
+        mlist = 9 * [np.nan]
+
         # Loop over waves
         for w in waves:
-            
+
             # Continue if not available
             if w not in d:
                 counter += 3
                 continue
-            
+
             # Loop over components
             for c in comps:
                 mlist[counter] = len(window_dict[w][c][mtype])
@@ -1774,7 +1700,7 @@ class GCMT3DInversion:
         NM = np.nansum(mlist)
 
         # Set threshold for damping
-        threshold1 = 250 
+        threshold1 = 250
         threshold0 = 500
 
         # If measurements are very low increase the damping a lot
@@ -1784,7 +1710,6 @@ class GCMT3DInversion:
         # If measurements are low but not crazy low increase dmaping a little
         elif NM < threshold0:
             self.hypo_damping *= 10.0
-
 
     def write_measurements(
             self, data: dict, synt: dict, post_fix: str = None):
