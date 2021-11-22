@@ -16,9 +16,12 @@ def plot_slab_cmts(slice_dict):
 
     # %% Load CMT catalog
 
-    oldcat = CMTCatalog.load(os.path.join('/Users/lucassawade', 'oldcat.pkl'))
-    newcat = CMTCatalog.load(os.path.join('/Users/lucassawade', 'newcat.pkl'))
+    oldcat = CMTCatalog.load(os.path.join(
+        '/Users/lucassawade/stats/catalogs', 'gcmt.pkl'))
+    newcat = CMTCatalog.load(os.path.join(
+        '/Users/lucassawade/stats/catalogs', 'gcmt3d+_fix.pkl'))
 
+    oldcat = oldcat.in_catalog(['C201811012219A'])
     ocat, ncat = oldcat.check_ids(newcat)
     # %% find nearest neighbours
 
@@ -48,9 +51,9 @@ def plot_slab_cmts(slice_dict):
     # text or plot.
     text_kwargs = dict(family='sans', size='medium', color='k')
     plot_kwargs = dict(linestyle='solid', color='k', linewidth=3.0)
-    scale_bar(mapax, (0.0, 0.5), 500, metres_per_unit=1000, unit_name='km',
-              text_kwargs=text_kwargs,
-              plot_kwargs=plot_kwargs)
+    # scale_bar(mapax, (0.0, 0.5), 500, metres_per_unit=1000, unit_name='km',
+    #           text_kwargs=text_kwargs,
+    #           plot_kwargs=plot_kwargs)
 
     # %%
     counter = 0

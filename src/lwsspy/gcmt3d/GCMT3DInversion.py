@@ -69,7 +69,9 @@ download_dict = dict(
     location="00",
 )
 
-conda_activation = "source /usr/licensed/anaconda3/2020.7/etc/profile.d/conda.sh && conda activate lwsspy"
+conda_activation = (
+    "source /usr/licensed/anaconda3/2020.7/etc/profile.d/conda.sh && "
+    "conda activate lwsspy")
 compute_node_login = "lsawade@traverse.princeton.edu"
 bash_escape = "source ~/.bash_profile"
 parameter_check_list = ['depth_in_m', "time_shift", 'latitude', 'longitude',
@@ -178,6 +180,8 @@ class GCMT3DInversion:
         self.__get_number_of_forward_simulations__()
         self.not_windowed_yet = True
         self.zero_trace = zero_trace
+        self.hessians = []
+        self.hessians_scaled = []
         # self.zero_energy = zero_energy
         self.damping = damping
         self.hypo_damping = hypo_damping
@@ -304,8 +308,10 @@ class GCMT3DInversion:
 
                 # Adjust windowing config
                 for _windict in self.processdict[_wave]["window"]:
-                    _windict["config"]["min_period"] = _process_dict["filter"][3]
-                    _windict["config"]["max_period"] = _process_dict["filter"][0]
+                    _windict["config"]["min_period"] = \
+                        _process_dict["filter"][3]
+                    _windict["config"]["max_period"] = \
+                        _process_dict["filter"][0]
 
         # Remove unnecessary wavetypes
         popkeys = []
@@ -410,15 +416,6 @@ class GCMT3DInversion:
                 self.zero_trace_array == 1.)[0]
             self.zero_trace_array = np.append(self.zero_trace_array, 0.0)
 
-        # elif self.zero_trace and self.zero_energy:
-
-        #     self.zero_trace_array = np.array([1.0 if _par in ['m_rr', 'm_tt', 'm_pp'] else 0.0
-        #                                       for _par in self.pardict.keys()])
-        #     self.zero_trace_index_array = np.where(
-        #         self.zero_trace_array == 1.)[0]
-        #     self.zero_trace_array = np.append(self.zero_trace_array, 0.0)
-        #     self.zero_trace_array = np.append(self.zero_trace_array, 0.0)
-
         # damping settings
         if self.damping > 0.0:
             # Do nothing as damping is easy to handle
@@ -441,9 +438,10 @@ class GCMT3DInversion:
         self.pars = [_par for _par in self.pardict.keys()]
 
         # Create scaling vector
-        self.scale = np.array([10**lmat.magnitude(getattr(self.cmtsource, _par))
-                               if _par not in mt_params else _dict['scale']
-                               for _par, _dict in self.pardict.items()])
+        self.scale = np.array(
+            [10**lmat.magnitude(getattr(self.cmtsource, _par))
+             if _par not in mt_params else _dict['scale']
+             for _par, _dict in self.pardict.items()])
 
         self.scaled_model = self.model/self.scale
         self.init_scaled_model = 1.0 * self.scaled_model
@@ -1215,7 +1213,10 @@ class GCMT3DInversion:
 
         # Run the simulations
         if self.iteration == 0:
-            pass  # First set of forward simulations where run when for windowing
+
+            # First set of forward simulations where run when for windowing
+            pass
+
         else:
             with lutils.Timer(plogger=self.logger.info):
                 self.__run_simulations__()
@@ -1231,6 +1232,9 @@ class GCMT3DInversion:
         # Evaluate
         cost = self.__compute_cost__()
         g, h = self.__compute_gradient_and_hessian__()
+
+        # Raw hessian
+        self.hessians.append(h.flatten())
 
         # Get normalization factor at the first iteration
         if self.iteration == 0:
@@ -1250,6 +1254,9 @@ class GCMT3DInversion:
         # Scaling of the cost function
         g *= self.scale
         h = np.diag(self.scale) @ h @ np.diag(self.scale)
+
+        # scaled hessian
+        self.hessians_scaled.append(h.flatten())
 
         self.logger.debug("Scaled")
         self.logger.debug(f"C: {cost}")
@@ -1279,12 +1286,14 @@ class GCMT3DInversion:
         elif self.hypo_damping > 0.0:
 
             # Only get the hessian elements of the hypocenter
-            hdiag = np.diag(h)[self.hypo_damp_index_array]
-            factor = self.hypo_damping * np.max(np.abs((hdiag)))
+            # hdiag = np.diag(h)[self.hypo_damp_index_array]
+            # factor = self.hypo_damping * np.max(np.abs((hdiag)))
+            ht = np.diag(np.diag(h)[self.hypo_damp_index_array])
+            factor = self.hypo_damping * np.trace(ht)/np.len(np.diag(ht))
             modelres = self.scaled_model - self.init_scaled_model
 
             self.logger.debug("HypoDiag:")
-            self.logger.debug(hdiag)
+            self.logger.debug(np.diag(ht))
             self.logger.debug("HypoDamping:")
             self.logger.debug(self.hypo_damping)
             self.logger.debug(f"f: {factor}")
@@ -1301,7 +1310,7 @@ class GCMT3DInversion:
             self.logger.debug("H")
             self.logger.debug(h.flatten())
 
-            # Add zero trace condition
+        # Add zero trace condition
         if self.zero_trace:  # and not self.zero_energy:
             m, n = h.shape
             hz = np.zeros((m+1, n+1))
@@ -1409,200 +1418,6 @@ class GCMT3DInversion:
 
         return gradient, hessian
 
-    def misfit_walk_depth(self):
-
-        # Start the walk
-        lutils.log_bar("Misfit walk: Depth", plogger=self.logger.info)
-
-        scaled_depths = np.arange(
-            self.cmtsource.depth_in_m - 10000,
-            self.cmtsource.depth_in_m + 10100, 1000)/1000.0
-        cost = np.zeros_like(scaled_depths)
-        grad = np.zeros((*scaled_depths.shape, 1))
-        hess = np.zeros((*scaled_depths.shape, 1, 1))
-        dm = np.zeros((*scaled_depths.shape, 1))
-
-        for _i, _dep in enumerate(scaled_depths):
-
-            lutils.log_section(
-                f"Computing CgH for: {_dep} km",
-                plogger=self.logger.info)
-
-            with lutils.Timer(plogger=self.logger.info):
-                c, g, h = self.compute_cost_gradient_hessian(
-                    np.array([_dep]))
-                lutils.log_action(
-                    f"\n     Iteration for {_dep} km done.",
-                    plogger=self.logger.info)
-            cost[_i] = c
-            grad[_i, :] = g
-            hess[_i, :, :] = h
-
-        # Get the Gauss newton step
-        for _i in range(len(scaled_depths)):
-            dm[_i, :] = np.linalg.solve(
-                hess[_i, :, :], -grad[_i, :])
-
-        plt.switch_backend("pdf")
-        plt.figure(figsize=(12, 4))
-        # Cost function
-        ax = plt.subplot(141)
-        plt.plot(cost, scaled_depths, label="Cost")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("Cost")
-        plt.ylabel("Depth [km]")
-
-        ax = plt.subplot(142, sharey=ax)
-        plt.plot(np.squeeze(grad), scaled_depths, label="Grad")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("Gradient")
-        ax.tick_params(labelleft=False, labelright=False)
-
-        ax = plt.subplot(143, sharey=ax)
-        plt.plot(np.squeeze(hess), scaled_depths, label="Hess")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("G.-N. Hessian")
-        ax.tick_params(labelleft=False, labelright=False)
-
-        ax = plt.subplot(144, sharey=ax)
-        plt.plot(np.squeeze(dm), scaled_depths, label="Step")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("$\\Delta$m [km]")
-        ax.tick_params(labelleft=False, labelright=False)
-
-        plt.savefig(self.cmtdir + "/misfit_walk_depth.pdf")
-
-        # Start the walk
-        lutils.log_bar("DONE.", plogger=self.logger.info)
-
-    def misfit_walk_depth_times(self):
-        """Pardict containing an array of the walk parameters.
-        Then we walk entirely around the parameter space."""
-
-        # if len(pardict) > 2:
-        #     raise ValueError("Only two parameters at a time.")
-
-        # depths = np.arange(self.cmtsource.depth_in_m - 10000,
-        #                    self.cmtsource.depth_in_m + 10100, 1000)
-        # times = np.arange(-10.0, 10.1, 1.0)
-        depths = np.arange(self.cmtsource.depth_in_m - 5000,
-                           self.cmtsource.depth_in_m + 5100, 1000)
-        times = np.arange(self.cmtsource.time_shift - 5.0,
-                          self.cmtsource.time_shift + 5.1, 1.0)
-        t, z = np.meshgrid(times, depths)
-        cost = np.zeros(z.shape)
-        grad = np.zeros((*z.shape, 2))
-        hess = np.zeros((*z.shape, 2, 2))
-        dm = np.zeros((*z.shape, 2))
-
-        for _i, _dep in enumerate(depths):
-            for _j, _time in enumerate(times):
-
-                c, g, h = self.compute_cost_gradient_hessian(
-                    np.array([_dep, _time]))
-                cost[_i, _j] = c
-                grad[_i, _j, :] = g
-                hess[_i, _j, :, :] = h
-
-        # Get the Gauss newton step
-        damp = 0.001
-        for _i in range(z.shape[0]):
-            for _j in range(z.shape[1]):
-                dm[_i, _j, :] = np.linalg.solve(
-                    hess[_i, _j, :, :]
-                    + damp * np.diag(np.ones(2)), - grad[_i, _j, :])
-        plt.switch_backend("pdf")
-        extent = [np.min(t), np.max(t), np.min(z), np.max(z)]
-        aspect = (np.max(t) - np.min(t))/(np.max(z) - np.min(z))
-        plt.figure(figsize=(11, 6.5))
-
-        # Get minimum
-        ind = np.unravel_index(np.argmin(cost, axis=None), cost.shape)
-
-        # Cost
-        ax1 = plt.subplot(3, 4, 9)
-        plt.imshow(cost, interpolation=None, extent=extent, aspect=aspect)
-        lplt.plot_label(ax1, r"$\mathcal{C}$", dist=0)
-        plt.plot(times[ind[0]], depths[ind[1]], "*")
-        c1 = plt.colorbar()
-        c1.ax.tick_params(labelsize=7)
-        c1.ax.yaxis.offsetText.set_fontsize(7)
-        ax1.axes.invert_yaxis()
-        plt.ylabel(r'$z$')
-        plt.xlabel(r'$t$')
-
-        # Gradient
-        ax2 = plt.subplot(3, 4, 6, sharey=ax1)
-        plt.imshow(grad[:, :, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c2 = plt.colorbar()
-        c2.ax.tick_params(labelsize=7)
-        c2.ax.yaxis.offsetText.set_fontsize(7)
-        ax2.tick_params(labelbottom=False)
-        lplt.plot_label(ax2, r"$g_{\Delta t}$", dist=0)
-
-        ax3 = plt.subplot(3, 4, 10, sharey=ax1)
-        plt.imshow(grad[:, :, 0], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c3 = plt.colorbar()
-        c3.ax.tick_params(labelsize=7)
-        c3.ax.yaxis.offsetText.set_fontsize(7)
-        ax3.tick_params(labelleft=False)
-        lplt.plot_label(ax3, r"$g_z$", dist=0)
-        plt.xlabel(r'$\Delta t$')
-
-        # Hessian
-        ax4 = plt.subplot(3, 4, 3, sharey=ax1)
-        plt.imshow(hess[:, :, 0, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c4 = plt.colorbar()
-        c4.ax.tick_params(labelsize=7)
-        c4.ax.yaxis.offsetText.set_fontsize(7)
-        ax4.tick_params(labelbottom=False)
-        lplt.plot_label(ax4, r"$\mathcal{H}_{z,\Delta t}$", dist=0)
-
-        ax5 = plt.subplot(3, 4, 7, sharey=ax1)
-        plt.imshow(hess[:, :, 1, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c5 = plt.colorbar()
-        c5.ax.tick_params(labelsize=7)
-        c5.ax.yaxis.offsetText.set_fontsize(7)
-        ax5.tick_params(labelleft=False, labelbottom=False)
-        lplt.plot_label(ax5, r"$\mathcal{H}_{\Delta t,\Delta t}$", dist=0)
-
-        ax6 = plt.subplot(3, 4, 11, sharey=ax1)
-        plt.imshow(hess[:, :, 0, 0], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c6 = plt.colorbar()
-        c6.ax.tick_params(labelsize=7)
-        c6.ax.yaxis.offsetText.set_fontsize(7)
-        ax6.tick_params(labelleft=False)
-        lplt.plot_label(ax6, r"$\mathcal{H}_{z,z}$", dist=0)
-        plt.xlabel(r'$\Delta t$')
-
-        # Gradient/Hessian
-        ax7 = plt.subplot(3, 4, 8, sharey=ax1)
-        plt.imshow(dm[:, :, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c7 = plt.colorbar()
-        c7.ax.tick_params(labelsize=7)
-        c7.ax.yaxis.offsetText.set_fontsize(7)
-        ax7.tick_params(labelleft=False, labelbottom=False)
-        lplt.plot_label(ax7, r"$\mathrm{d}\Delta$", dist=0)
-
-        ax8 = plt.subplot(3, 4, 12, sharey=ax1)
-        plt.imshow(dm[:, :, 0], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c8 = plt.colorbar()
-        c8.ax.tick_params(labelsize=7)
-        c8.ax.yaxis.offsetText.set_fontsize(7)
-        ax8.tick_params(labelleft=False)
-        lplt.plot_label(ax8, r"$\mathrm{d}z$", dist=0)
-        plt.xlabel(r'$\Delta t$')
-
-        plt.subplots_adjust(hspace=0.2, wspace=0.15)
-        plt.savefig(self.cmtdir + "/SyntheticCostGradHess.pdf")
-
     def plot_data(self, outputdir="."):
         plt.switch_backend("pdf")
         for _wtype in self.processdict.keys():
@@ -1667,46 +1482,6 @@ class GCMT3DInversion:
                 filename = os.path.join(syntdir_init, f"{_wtype}_stream.pkl")
                 with open(filename, 'wb') as f:
                     cPickle.dump(self.synt_dict_init[_wtype]["synt"], f)
-
-    def adjust_damping(self):
-        """Adjusts damping for events with a low measurement count."""
-
-        # Get all the measurements
-        d = get_all_measurements(
-            self.data_dict, self.synt_dict_init, self.cmtsource, logger=self.logger)
-
-        # Waves and components
-        mtype = 'dlna'  # placeholder measurement
-        waves = ['body', 'surface', 'mantle']
-        comps = ['Z', 'R', 'T']
-
-        # Empty list
-        mlist = 9 * [np.nan]
-
-        counter = 0
-        # Loop over waves
-        for w in waves:
-
-            # Continue if not available
-            if w not in d:
-                counter += 3
-                continue
-
-            # Loop over components
-            for c in comps:
-                mlist[counter] = len(window_dict[w][c][mtype])
-                counter += 1
-
-        # Check total number of measurements made
-        NM = np.nansum(mlist)
-
-        # If measurements are very low increase the damping a lot
-        if NM < threshold1:
-            self.hypo_damping *= 100.0
-
-        # If measurements are low but not crazy low increase dmaping a little
-        elif NM < threshold0:
-            self.hypo_damping *= 10.0
 
     def write_measurements(
             self, data: dict, synt: dict, post_fix: str = None):
@@ -2133,6 +1908,7 @@ def bin():
         modelhistory = optim_out.msave
         hessianhistory = optim_out.hsave
         scale = gcmt3d.scale
+        hdidx = gcmt3d.hypo_damp_index_array
 
     cost = optim_out.fcost
     fcost_hist = optim_out.fcost_hist
@@ -2150,7 +1926,12 @@ def bin():
         fcost_hist=fcost_hist,
         fcost_init=fcost_init,
         scale=scale,
-        hessianhistory=hessianhistory
+        damping=damping,
+        hypo_damping=hypo_damping,
+        hypo_damping_index=hdidx,
+        hessianhistory=hessianhistory,
+        hessians=np.array(gcmt3d.hessians),
+        hessians_scaled=np.array(gcmt3d.hessians_scaled)
     )
 
     # To be able to output the current model we need to go back and run one

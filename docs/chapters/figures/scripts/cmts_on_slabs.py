@@ -1,4 +1,4 @@
-from lwsspy.seismo.invertcmt.plot_slab_cmts import plot_slab_cmts
+from lwsspy.gcmt3d.plot_slab_cmts import plot_slab_cmts
 
 # %%
 
