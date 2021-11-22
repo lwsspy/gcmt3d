@@ -1846,7 +1846,6 @@ def bin():
     gcmt3d.process_data()
     gcmt3d.get_windows()
     gcmt3d.__compute_weights__()
-    gcmt3d.adjust_damping()
 
     optim_list = []
 
