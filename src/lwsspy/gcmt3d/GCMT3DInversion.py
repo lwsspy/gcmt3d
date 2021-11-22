@@ -1289,7 +1289,7 @@ class GCMT3DInversion:
             # hdiag = np.diag(h)[self.hypo_damp_index_array]
             # factor = self.hypo_damping * np.max(np.abs((hdiag)))
             ht = np.diag(np.diag(h)[self.hypo_damp_index_array])
-            factor = self.hypo_damping * np.trace(ht)/np.len(np.diag(ht))
+            factor = self.hypo_damping * np.trace(ht)/np.diag(ht).size
             modelres = self.scaled_model - self.init_scaled_model
 
             self.logger.debug("HypoDiag:")

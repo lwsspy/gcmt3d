@@ -3,6 +3,42 @@ import os
 from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import List
+import pandas as pd
+
+
+def get_files(databases: List[str]):
+
+    # Get all cmts in database
+    cmts = os.listdir(databases[0])
+
+    filetable = []
+    for cmt in cmts:
+        row = []
+
+        try:
+            for _db in databases:
+                file = os.path.join(_db, cmt, 'summary.npz')
+                if os.path.exists(file):
+                    row.append(file)
+                else:
+                    else Raise FileNotFoundError
+
+        except FileNotFoundError as e:
+            if verbose:
+                print(f"{cmt:13s} not found in {_db}")
+
+        filetable.append(row)
+
+
+def evaluate_damping(databases: List[str]):
+
+    # Get all cmts
+    filetable = get_files(databases)
+
+    # DB sort
+    # DB dampings
+    dbcols = [1/float(os.path.basename(_s)[1:]) for _db in databases]
 
 
 def get_optimization_stats(database):
