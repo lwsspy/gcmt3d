@@ -188,6 +188,7 @@ class GCMT3DInversion:
         self.normalize = normalize
         self.weighting = weighting
         self.weights_rtz = dict(R=1.0, T=1.0, Z=1.0)
+        self.mindepth = 5000.0
 
         # Initialize data dictionaries
         self.data_dict: dict = dict()
@@ -434,6 +435,8 @@ class GCMT3DInversion:
         # Get the model vector given the parameters to invert for
         self.model = np.array(
             [getattr(self.cmtsource, _par) for _par in self.pardict.keys()])
+        self.model_idxdict = {_par: _i for _i,
+                              _par in enumerate(self.pardict.keys())}
         self.init_model = 1.0 * self.model
         self.pars = [_par for _par in self.pardict.keys()]
 
@@ -1202,11 +1205,27 @@ class GCMT3DInversion:
 
         # Update model
         if self.zero_trace:
+
+            # Read in model
             self.model = model[:-1] * self.scale
-            self.scaled_model = model[:-1]
+
+            # Fix depth to 5 km
+            if self.model[self.model_idxdict['depth_in_m']] < self.mindepth:
+                self.model[self.model_idxdict['depth_in_m']] = self.mindepth
+
+            # Scale model again
+            self.scaled_model = self.model / self.scale
         else:
+
+            # Read in model
             self.model = model * self.scale
-            self.scaled_model = model
+
+            # Fix depth to 5 km
+            if self.model[self.model_idxdict['depth_in_m']] < self.mindepth:
+                self.model[self.model_idxdict['depth_in_m']] = self.mindepth
+
+            # Scale model again
+            self.scaled_model = self.model / self.scale
 
         # Write sources for next iteration
         self.__write_sources__()
@@ -1218,6 +1237,7 @@ class GCMT3DInversion:
             pass
 
         else:
+            # Run simulations with the updated sources
             with lutils.Timer(plogger=self.logger.info):
                 self.__run_simulations__()
 
@@ -1907,8 +1927,8 @@ def bin():
         modelhistory = optim_out.msave
         hessianhistory = optim_out.hsave
         scale = gcmt3d.scale
-        hdidx = gcmt3d.hypo_damp_index_array
 
+    hdidx = gcmt3d.hypo_damp_index_array
     cost = optim_out.fcost
     fcost_hist = optim_out.fcost_hist
     fcost_init = optim_out.fcost_init

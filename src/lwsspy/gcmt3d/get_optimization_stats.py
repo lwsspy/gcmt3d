@@ -7,38 +7,62 @@ from typing import List
 import pandas as pd
 
 
-def get_files(databases: List[str]):
+def get_files(databases: List[str], , verbose: bool = True):
 
     # Get all cmts in database
     cmts = os.listdir(databases[0])
 
     filetable = []
+    cmtf = []
     for cmt in cmts:
         row = []
 
         try:
+            # For each database
             for _db in databases:
+
+                # See whether
                 file = os.path.join(_db, cmt, 'summary.npz')
+
+                # The summary file exists
                 if os.path.exists(file):
+
+                    # Then append it to the row
                     row.append(file)
+
                 else:
-                    else Raise FileNotFoundError
+                    raise FileNotFoundError
 
         except FileNotFoundError as e:
+
             if verbose:
                 print(f"{cmt:13s} not found in {_db}")
 
         filetable.append(row)
+        cmtf.append(row)
+
+    return cmtf, filetable
 
 
-def evaluate_damping(databases: List[str]):
+def evaluate_damping(databases: List[str], values):
 
     # Get all cmts
-    filetable = get_files(databases)
+    cmtf, filetable = get_files(databases)
 
     # DB sort
+    dbnames = [os.path.basename(_db) for _db in databases]
+
     # DB dampings
-    dbcols = [1/float(os.path.basename(_s)[1:]) for _db in databases]
+    dbvals = [1/float(_name[1:]) for _name in dbnames]
+
+    #
+
+    summary = np.load(summaryfile)
+    idx = summary['hypo_damping_index']
+    optH = summary['hypo']
+    np.where(np.all(np.isclose(a, b), axis=1))[0]
+
+    np.linalg.eigvalsh()
 
 
 def get_optimization_stats(database):
