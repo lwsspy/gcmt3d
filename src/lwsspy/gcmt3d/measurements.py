@@ -365,7 +365,7 @@ def get_measurement_N(
     return df
 
 
-def get_measurement_N(
+def get_eigenvalues(
         database0: str, label0: str,
         database1: str, label1: str,
         mlabel0: str = None, mlabel1: str = None,
