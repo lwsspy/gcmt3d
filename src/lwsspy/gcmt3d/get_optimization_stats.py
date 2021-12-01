@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 
 
-def get_files(databases: List[str], , verbose: bool = True):
+def get_files(databases: List[str], verbose: bool = True):
 
     # Get all cmts in database
     cmts = os.listdir(databases[0])
@@ -55,7 +55,8 @@ def evaluate_damping(databases: List[str], values):
     # DB dampings
     dbvals = [1/float(_name[1:]) for _name in dbnames]
 
-    #
+    # Create a
+    hessians = np.zeros((len(cmtf), len(databases), 4, 4))
 
     summary = np.load(summaryfile)
     idx = summary['hypo_damping_index']

@@ -357,7 +357,10 @@ def get_measurement_N(
     df = pd.DataFrame(Nm, columns=columns)
 
     if outfile:
-        df.to_feather(outfile)
+        if 'feather' in outfile:
+            df.to_feather(outfile)
+        else:
+            df.to_hdf5(outfile)
 
     return df
 
