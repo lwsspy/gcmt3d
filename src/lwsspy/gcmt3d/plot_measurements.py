@@ -752,7 +752,7 @@ def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = F
               '$\Delta$x', '$\Delta$t']
     units = ['km', None, 'km', 's']
     xlims = [[-30, +30], [-1, +1], [0, 50], [-5.0, 5.0]]
-    xlims = [[-30, +30], [-1, +1], [0, 50], [-5.0, 5.0]]
+    xlims = [[-10, +10], [-1, +1], [0, 100], [-2.0, 2.0]]
     # xlims = [[-100, +100], [-200, +200], [0, 300], [-30, +30]]
     # xlims = 4 * [None, None]
 
