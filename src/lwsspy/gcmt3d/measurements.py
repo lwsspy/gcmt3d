@@ -368,7 +368,6 @@ def get_measurement_N(
 def get_eigenvalues(
         database0: str, label0: str,
         database1: str, label1: str,
-        mlabel0: str = None, mlabel1: str = None,
         v: bool = True,
         outfile: str = None,
         catalog0: str = None,
@@ -477,7 +476,7 @@ def get_eigenvalues(
             cmt0.longitude, cmt0.latitude, cmt1.longitude, cmt1.latitude)
 
         # Get number of measurements involved
-        HH = np.load(os.path.join(database1, cmt1.eventname),  'summary.npz')[
+        HH = np.load(os.path.join(database1, cmt1.eventname, 'summary.npz'))[
             'hessianhistory'
         ]
         eig = np.sort(np.linalg.eigvals(HH.squeeze()))[::-1].tolist()
