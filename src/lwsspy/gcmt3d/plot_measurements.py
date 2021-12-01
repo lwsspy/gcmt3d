@@ -998,3 +998,30 @@ def filter_good_outliers(df):
     print("Ntot: ", Ntot[pos])
     print("overlap", df['event'].iloc[d])
     return df.iloc[pos]
+
+
+def plot_eigenvalues(dfs, titles: list = None):
+
+    if isinstance(dfs, DataFrame):
+        dfs = [dfs]
+
+    N = len(dfs)
+
+    if not titles:
+        titles = N*[None]
+
+    plt.figure()
+    c = ['b', 'r']
+    for i in range(N):
+
+        mn = dfs[i].iloc[:, 2:].mean(axis=0).to_numpy()
+        std = dfs[i].iloc[:, 2:].std(axis=0).to_numpy()
+        M = len(mn)
+        x = np.arange(M) + 0.1*i
+        xx = np.tile(x, (len(dfs[i]), 1))
+        # plt.fill_between(x, mn+std, mn-std, color=(0.9, 0.9, 0.9))
+        plt.plot(xx.flatten(), dfs[i].iloc[:, 2:].to_numpy().flatten(),
+                 f'{c[i]}.', label=titles[i])
+
+    plt.legend()
+    plt.show()
