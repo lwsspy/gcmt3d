@@ -366,115 +366,72 @@ def get_measurement_N(
 
 
 def get_eigenvalues(
-        database0: str, label0: str,
-        database1: str, label1: str,
+        database: str, label0: str,
         v: bool = True,
         outfile: str = None,
-        catalog0: str = None,
-        catalog1: str = None):
+        catalog: str = None):
     """Takes in databse locations and labels to create a table that contains
     measurement count vs. parameter change.
 
     Parameters
     ----------
-    database0 : str
+    database : str
         Starting database
-    label0 : str
-        label of starting solution
-    mlabel0 : str, optional,
-        if the starting label of the measurement differs from the one of the
-        solution
-    database1 : str
-        Final database
-    label1 : str
+    label : str
         label of final solution
-    mlabel1 : str, optional
-        if the final measurement label differs from the cmtfile one
     v : bool, optional
         flag to turn on verbose output
     outfile : str, optional
         save to feather file
-    catalog0 : str, optional
-        optional catalog input to not require file search
-    catalog1 : str, optional
+    catalog : str, optional
         optional catalog input to not require file search
 
     Returns
     -------
     Arraylike table
-        CID, ddepth, dM0, dcmt, dx, *[measurement counts for wave types]
+        CID, time, *[sorted eigenvalues]
 
     """
 
     # Loading or Creating catalog 0
-    if catalog0:
+    if catalog:
 
         # Create catalogs
         if v:
             print("Loading Catalog0...")
-        cat0 = lseis.CMTCatalog.load(catalog0)
+        cat = lseis.CMTCatalog.load(catalog)
 
     else:
         # Get all cmtfiles
         if v:
             print("Get events for cat 0...")
-        cmtfiles0 = get_event_files(database0, label0)
+        cmtfiles = get_event_files(database, label)
 
         # Create catalog
         if v:
             print("Create Catalog 0...")
-        cat0 = lseis.CMTCatalog.from_file_list(cmtfiles0)
-
-    # Loading or Creating catalog 0
-    if catalog1:
-
-        # load catalog
-        if v:
-            print("Loading Catalog1...")
-        cat1 = lseis.CMTCatalog.load(catalog1)
-
-    else:
-
-        # Get cmtfiles
-        if v:
-            print("Get events for cat 0...")
-        cmtfiles1 = get_event_files(database1, label1)
-
-        # Create catalogs
-        if v:
-            print("Create Catalog 0...")
-        cat1 = lseis.CMTCatalog.from_file_list(cmtfiles1)
-
-    if v:
-        print("Check ids...")
-    cat0, cat1 = cat0.check_ids(cat1)
+        cat = lseis.CMTCatalog.from_file_list(cmtfiles)
 
     # Waves and components
     eigv = [f'{i}' for i in range(10)]
 
     # Create numpy structure dtype
-    columns = ['event', 'date', 'dz', 'dM0', 'dt', 'dx', *eigv]
+    columns = ['event', 'date', *eigv]
 
     Nm = []
 
-    for cmt0, cmt1 in zip(cat0, cat1):
+    for cmt in cat:
         if v:
-            print(f"Adding {cmt0.eventname} ...", end='\r')
-
-        # Compute changes
-        dz = (cmt1.depth_in_m - cmt0.depth_in_m)/1000.0
-        dt = cmt1.time_shift - cmt0.time_shift
-        dM0 = (cmt1.M0 - cmt0.M0)/cmt0.M0
-        dx = lmap.haversine(
-            cmt0.longitude, cmt0.latitude, cmt1.longitude, cmt1.latitude)
+            print(f"Adding {cmt.eventname} ...", end='\r')
 
         # Get number of measurements involved
-        HH = np.load(os.path.join(database1, cmt1.eventname, 'summary.npz'))[
+        HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
             'hessianhistory'
         ]
         eig = np.sort(np.linalg.eigvals(HH.squeeze()))[::-1].tolist()
+
         Nm.append(
-            (cmt1.eventname, cmt1.cmt_time.matplotlib_date, dz, dM0, dt, dx, *eig)
+            (cmt.eventname, cmt.cmt_time.matplotlib_date, *eig)
         )
 
     # Create table from measurements
