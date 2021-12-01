@@ -496,10 +496,10 @@ def get_maxelement(
         cat = lseis.CMTCatalog.from_file_list(cmtfiles)
 
     # Waves and components
-    # eigv = [f'{i}' for i in range(10)]
+    args = [f'{i}' for i in range(10)]
 
     # Create numpy structure dtype
-    columns = ['event', 'date', 'idx']
+    columns = ['event', 'date', *args]
 
     Nm = []
 
@@ -511,10 +511,10 @@ def get_maxelement(
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
             'hessianhistory'
         ]
-        idx = np.argmax(np.diag(HH.squeeze()))
+        idx = np.argsort(np.diag(HH.squeeze()))[::-1]
 
         Nm.append(
-            (cmt.eventname, cmt.cmt_time.matplotlib_date, idx)
+            (cmt.eventname, cmt.cmt_time.matplotlib_date, *idx)
         )
 
     # Create table from measurements
