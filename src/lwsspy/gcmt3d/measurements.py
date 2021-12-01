@@ -366,7 +366,8 @@ def get_measurement_N(
 
 
 def get_eigenvalues(
-        database: str, label0: str,
+        database: str,
+        label: str,
         v: bool = True,
         outfile: str = None,
         catalog: str = None):
