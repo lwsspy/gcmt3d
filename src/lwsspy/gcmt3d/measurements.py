@@ -406,13 +406,6 @@ def get_eigenvalues(
 
     """
 
-    # Set labels if not provided
-    if not mlabel0:
-        mlabel0 = label0
-
-    if not mlabel1:
-        mlabel1 = label1
-
     # Loading or Creating catalog 0
     if catalog0:
 
