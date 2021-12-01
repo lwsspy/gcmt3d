@@ -511,7 +511,7 @@ def get_maxelement(
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
             'hessianhistory'
         ]
-        idx = np.argmax(np.diag(HH))
+        idx = np.argmax(np.diag(HH.squeeze()))
 
         Nm.append(
             (cmt.eventname, cmt.cmt_time.matplotlib_date, idx)
