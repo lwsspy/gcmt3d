@@ -360,7 +360,7 @@ def get_measurement_N(
         if 'feather' in outfile:
             df.to_feather(outfile)
         else:
-            df.to_hdf5(outfile)
+            df.to_pickle(outfile)
 
     return df
 
