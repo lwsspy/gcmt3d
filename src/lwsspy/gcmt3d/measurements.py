@@ -6,6 +6,7 @@ from obspy import UTCDateTime, Stream
 import logging
 import numpy as np
 import pandas as pd
+from scipy.linalg import svdvals
 from lwsspy import plot as lplot
 from lwsspy import signal as lsig
 from lwsspy import seismo as lseis
@@ -429,7 +430,8 @@ def get_eigenvalues(
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
             'hessianhistory'
         ]
-        eig = np.sort(np.linalg.svdvals(HH.squeeze()))[::-1].tolist()
+        # eig = np.sort(np.linalg.eigvals(HH.squeeze()))[::-1].tolist()
+        eig = np.sort(svdvals(HH.squeeze()))[::-1].tolist()
 
         Nm.append(
             (cmt.eventname, cmt.cmt_time.matplotlib_date, *eig)
