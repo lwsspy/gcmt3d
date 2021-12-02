@@ -429,7 +429,7 @@ def get_eigenvalues(
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
             'hessianhistory'
         ]
-        eig = np.sort(np.linalg.eigvals(HH.squeeze()))[::-1].tolist()
+        eig = np.sort(np.linalg.svdvals(HH.squeeze()))[::-1].tolist()
 
         Nm.append(
             (cmt.eventname, cmt.cmt_time.matplotlib_date, *eig)
