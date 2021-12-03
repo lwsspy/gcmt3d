@@ -1308,7 +1308,7 @@ class GCMT3DInversion:
             # Only get the hessian elements of the hypocenter
             # hdiag = np.diag(h)[self.hypo_damp_index_array]
             # factor = self.hypo_damping * np.max(np.abs((hdiag)))
-            factor = self.hypo_damping * np.trace(h)/np.diag(h).size
+            factor = self.hypo_damping * np.trace(h)
             modelres = self.scaled_model - self.init_scaled_model
 
             self.logger.debug("HypoDiag:")
