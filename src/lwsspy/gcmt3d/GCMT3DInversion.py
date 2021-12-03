@@ -441,10 +441,12 @@ class GCMT3DInversion:
         self.pars = [_par for _par in self.pardict.keys()]
 
         # Create scaling vector
-        self.scale = np.array(
-            [10**lmat.magnitude(getattr(self.cmtsource, _par))
-             if _par not in mt_params else _dict['scale']
-             for _par, _dict in self.pardict.items()])
+        # self.scale = np.array(
+        #     [10**lmat.magnitude(getattr(self.cmtsource, _par))
+        #      if _par not in mt_params else _dict['scale']
+        #      for _par, _dict in self.pardict.items()])
+        self.scale = np.array([_dict['scale']
+                              for _, _dict in self.pardict.items()])
 
         self.scaled_model = self.model/self.scale
         self.init_scaled_model = 1.0 * self.scaled_model
