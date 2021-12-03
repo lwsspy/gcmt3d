@@ -1020,7 +1020,7 @@ def plot_eigenvalues(dfs, titles: list = None):
         x = np.arange(M) + 0.1*i
         xx = np.tile(x, (len(dfs[i]), 1))
         # plt.fill_between(x, mn+std, mn-std, color=(0.9, 0.9, 0.9))
-        plt.plot(xx.flatten(), dfs[i].iloc[:, 2:].to_numpy().flatten(),
+        plt.plot(xx.flatten(), np.log10(dfs[i].iloc[:, 2:].to_numpy().flatten()),
                  f'{c[i]}.', label=titles[i])
 
     plt.legend()
