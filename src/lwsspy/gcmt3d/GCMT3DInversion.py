@@ -1314,7 +1314,7 @@ class GCMT3DInversion:
             modelres = self.scaled_model - self.init_scaled_model
 
             self.logger.debug("HypoDiag:")
-            self.logger.debug(np.diag(ht))
+            self.logger.debug(np.diag(h))
             self.logger.debug("HypoDamping:")
             self.logger.debug(self.hypo_damping)
             self.logger.debug(f"f: {factor}")
