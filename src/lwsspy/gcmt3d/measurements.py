@@ -454,6 +454,84 @@ def get_eigenvalues(
     return df
 
 
+def get_damping_params(
+        database: str,
+        label: str,
+        v: bool = True,
+        outfile: str = None,
+        catalog: str = None):
+    """Takes in databse locations and labels to create a table that contains
+    the model norm and the damping parameter
+
+    Parameters
+    ----------
+    database : str
+        Starting database
+    label : str
+        label of final solution
+    v : bool, optional
+        flag to turn on verbose output
+    outfile : str, optional
+        save to feather file
+    catalog : str, optional
+        optional catalog input to not require file search
+
+    Returns
+    -------
+    Arraylike table
+        CID, time, *[sorted eigenvalues]
+
+    """
+
+    # Loading or Creating catalog 0
+    if catalog:
+
+        # Create catalogs
+        if v:
+            print("Loading Catalog0...")
+        cat = lseis.CMTCatalog.load(catalog)
+
+    else:
+        # Get all cmtfiles
+        if v:
+            print("Get events for cat 0...")
+        cmtfiles = get_event_files(database, label)
+
+        # Create catalog
+        if v:
+            print("Create Catalog 0...")
+        cat = lseis.CMTCatalog.from_file_list(cmtfiles)
+
+    # Create numpy structure dtype
+    columns = ['event', 'date', 'modelnorm', 'cost']
+
+    Nm = []
+
+    for cmt in cat:
+        if v:
+            print(f"Adding {cmt.eventname} ...", end='\r')
+
+        # Get number of measurements involved
+        summary = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))
+        mnorm = summary['modelnorm']
+        fcost = summary['cost']
+
+        Nm.append(
+            (cmt.eventname, cmt.cmt_time.matplotlib_date, mnorm, fcost)
+        )
+
+    # Create table from measurements
+    df = pd.DataFrame(Nm, columns=columns)
+
+    if outfile:
+        if 'feather' in outfile:
+            df.to_feather(outfile)
+        else:
+            df.to_pickle(outfile)
+
+    return df
+
+
 def get_maxelement(
         database: str,
         label: str,

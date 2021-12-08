@@ -44,28 +44,6 @@ def get_files(databases: List[str], verbose: bool = True):
     return cmtf, filetable
 
 
-def evaluate_damping(databases: List[str], values):
-
-    # Get all cmts
-    cmtf, filetable = get_files(databases)
-
-    # DB sort
-    dbnames = [os.path.basename(_db) for _db in databases]
-
-    # DB dampings
-    dbvals = [1/float(_name[1:]) for _name in dbnames]
-
-    # Create a
-    hessians = np.zeros((len(cmtf), len(databases), 4, 4))
-
-    summary = np.load(summaryfile)
-    idx = summary['hypo_damping_index']
-    optH = summary['hypo']
-    np.where(np.all(np.isclose(a, b), axis=1))[0]
-
-    np.linalg.eigvalsh()
-
-
 def get_optimization_stats(database):
 
     # Get all cmts in database
