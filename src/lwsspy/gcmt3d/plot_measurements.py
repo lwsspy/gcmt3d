@@ -1054,8 +1054,8 @@ def plot_damping(dfs, titles: list = None):
             plt.plot(np.log10(costs[i]), np.log10(
                 modelnorms[i]), 'o', c=c[i], label=titles[i])
         plt.title(ev)
-        plt.xlabel('Log Cost')
-        plt.ylabel('Log Model Norm')
+        plt.xlabel('$\log$ Normalized Cost')
+        plt.ylabel('$\log {| x - x_0 |}_{2}$')
         plt.legend()
-        plt.subplots_adjust()
+
     plt.show()
