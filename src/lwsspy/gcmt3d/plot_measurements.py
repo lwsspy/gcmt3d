@@ -1025,3 +1025,30 @@ def plot_eigenvalues(dfs, titles: list = None):
 
     plt.legend()
     plt.show()
+
+
+def plot_damping(dfs, titles: list = None):
+
+    if isinstance(dfs, DataFrame):
+        dfs = [dfs]
+
+    N = len(dfs)
+
+    if not titles:
+        titles = N*[None]
+
+    plt.figure()
+
+    for ev in dfs[0]['event']:
+
+        modelnorms = []
+        costs = []
+
+        for i in range(N):
+            modelnorms.append(dfs[i][dfs[i]['events'] == ev].iloc[0, 2])
+            costs.append(dfs[i][dfs[i]['events'] == ev].iloc[0, 3])
+
+        plt.plot(modelnorms, costs, label=ev)
+
+    plt.legend()
+    plt.show()
