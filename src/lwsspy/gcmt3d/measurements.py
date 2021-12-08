@@ -430,8 +430,10 @@ def get_eigenvalues(
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
             'hessians_scaled'
         ]
+        print(HH)
         HH = HH[-1]
         HH = HH.reshape(10, 10)
+
         # eig = np.sort(np.linalg.eigvals(HH.squeeze()))[::-1].tolist()
         eig = np.sort(svdvals(HH.squeeze()))[::-1].tolist()
 
