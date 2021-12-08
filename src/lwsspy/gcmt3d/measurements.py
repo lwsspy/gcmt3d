@@ -428,8 +428,10 @@ def get_eigenvalues(
 
         # Get number of measurements involved
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
-            'hessianhistory'
+            'hessians_scaled'
         ]
+        HH = HH[-1]
+        HH = HH.reshape(10, 10)
         # eig = np.sort(np.linalg.eigvals(HH.squeeze()))[::-1].tolist()
         eig = np.sort(svdvals(HH.squeeze()))[::-1].tolist()
 
@@ -511,8 +513,11 @@ def get_maxelement(
 
         # Get number of measurements involved
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
-            'hessianhistory'
+            'hessians_scaled'
         ]
+        HH = HH[-1]
+        HH = HH.reshape(10, 10)
+
         idx = np.argsort(np.diag(HH.squeeze()))[::-1]
 
         Nm.append(
