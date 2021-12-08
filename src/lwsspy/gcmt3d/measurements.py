@@ -428,9 +428,10 @@ def get_eigenvalues(
 
         # Get number of measurements involved
         HH = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))[
-            'hessians_scaled'
+            'hessians'
         ]
         print(HH)
+
         HH = HH[-1]
         HH = HH.reshape(10, 10)
 
