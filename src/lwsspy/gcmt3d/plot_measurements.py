@@ -1037,18 +1037,25 @@ def plot_damping(dfs, titles: list = None):
     if not titles:
         titles = N*[None]
 
-    plt.figure()
+    c = lplt.pick_colors_from_cmap(6, 'rainbow')
 
     for ev in dfs[0]['event']:
 
+        plt.figure()
         modelnorms = []
         costs = []
 
         for i in range(N):
-            modelnorms.append(dfs[i][dfs[i]['events'] == ev].iloc[0, 2])
-            costs.append(dfs[i][dfs[i]['events'] == ev].iloc[0, 3])
+            modelnorms.append(dfs[i][dfs[i]['event'] == ev].iloc[0, 2])
+            costs.append(dfs[i][dfs[i]['event'] == ev].iloc[0, 3])
 
-        plt.plot(modelnorms, costs, label=ev)
-
-    plt.legend()
+        plt.plot(np.log10(costs), np.log10(modelnorms))
+        for i in range(N):
+            plt.plot(np.log10(costs[i]), np.log10(
+                modelnorms[i]), 'o', c=c[i], label=titles[i])
+        plt.title(ev)
+        plt.xlabel('Log Cost')
+        plt.ylabel('Log Model Norm')
+        plt.legend()
+        plt.subplots_adjust()
     plt.show()

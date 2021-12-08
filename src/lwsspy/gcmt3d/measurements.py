@@ -513,7 +513,7 @@ def get_damping_params(
 
         # Get number of measurements involved
         summary = np.load(os.path.join(database, cmt.eventname, 'summary.npz'))
-        mnorm = summary['modelnorm']
+        mnorm = np.sqrt((summary['model']-summary['init_model'])**2)
         fcost = summary['cost']
 
         Nm.append(
