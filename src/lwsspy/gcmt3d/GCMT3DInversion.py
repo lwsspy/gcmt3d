@@ -1905,7 +1905,8 @@ def bin():
 
         optim_list.append(deepcopy(optim_out))
 
-    print("Hessian list": print(self.hessians_scaled))
+    print("Hessian list", gcmt3d.hessians_scaled)
+
     # Stuff for L-Curves
     # Get model related things to save
     if gcmt3d.zero_trace:
