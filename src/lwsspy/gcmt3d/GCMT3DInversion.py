@@ -1279,7 +1279,7 @@ class GCMT3DInversion:
 
         # scaled hessian
         self.hessians_scaled.append(h.flatten())
-
+        print(self.hessians_scaled)
         self.logger.debug("Scaled")
         self.logger.debug(f"C: {cost}")
         self.logger.debug("G:")
@@ -1905,6 +1905,7 @@ def bin():
 
         optim_list.append(deepcopy(optim_out))
 
+    print("Hessian list": print(self.hessians_scaled))
     # Stuff for L-Curves
     # Get model related things to save
     if gcmt3d.zero_trace:
