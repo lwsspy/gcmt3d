@@ -22,7 +22,10 @@ git clone $LWSSPYGCMT3D
 
 # Create environment from lwsspy's file
 cd lwsspy
+<<<<<<< HEAD
 git checkout $BRANCH
+=======
+>>>>>>> af9d99f7c39747e6409025cecc8fda6f30919731
 conda env create -n lwsspy -f environment.yml
 conda activate lwsspy
 pip install -e .

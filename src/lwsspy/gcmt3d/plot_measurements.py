@@ -1039,9 +1039,9 @@ def plot_damping(dfs, titles: list = None):
 
     c = lplt.pick_colors_from_cmap(6, 'rainbow')
 
-    for ev in dfs[0]['event']:
+    plt.figure(figsize=(9, 6))
+    for _i, ev in enumerate(dfs[0]['event']):
 
-        plt.figure()
         modelnorms = []
         costs = []
 
@@ -1049,13 +1049,25 @@ def plot_damping(dfs, titles: list = None):
             modelnorms.append(dfs[i][dfs[i]['event'] == ev].iloc[0, 2])
             costs.append(dfs[i][dfs[i]['event'] == ev].iloc[0, 3])
 
-        plt.plot(np.log10(costs), np.log10(modelnorms))
+        plt.subplot(2, 3, _i + 1)
+        # plt.plot(np.log10(costs), np.log10(modelnorms))
+        plt.plot(costs, modelnorms)
+        handles = []
         for i in range(N):
-            plt.plot(np.log10(costs[i]), np.log10(
-                modelnorms[i]), 'o', c=c[i], label=titles[i])
+            handles.append(plt.plot(costs[i],
+                                    modelnorms[i], 'o', c=c[i], label=titles[i])[0])
+            # handles.append(plt.plot(np.log10(costs[i]), np.log10(
+            #     modelnorms[i]), 'o', c=c[i], label=titles[i])[0])
         plt.title(ev)
-        plt.xlabel('$\log$ Normalized Cost')
-        plt.ylabel('$\log {| x - x_0 |}_{2}$')
-        plt.legend()
+        if (_i % 3) == 0:
+            plt.ylabel('l-2 Norm of Model Diff.')
+        if _i >= 2:
+            plt.xlabel('Normalized Cost')
+
+    ax = plt.subplot(2, 3, 6)
+    ax.legend(handles, titles, title='$\\lambda$',
+              loc='lower right', borderaxespad=0.0)
+    ax.axis('off')
+    plt.subplots_adjust(hspace=0.3)
 
     plt.show()
