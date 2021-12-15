@@ -65,8 +65,7 @@ processdict = lutils.read_yaml_file(os.path.join(scriptdir, "process.yml"))
 
 download_dict = dict(
     network=",".join(['CU', 'G', 'GE', 'IC', 'II', 'IU', 'MN']),
-    channel="BH*",
-    location="00",
+    channel_priorities=["LH*", "BH*"],
 )
 
 conda_activation = (

@@ -36,7 +36,32 @@ def get_stuff(inversionfile, scaling_file, catalog) -> tuple:
     return events, G, H, scaling, cat
 
 
-def inversion_tests(events, G, H, scaling, cat, hypo_only=False):
+def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
+    """[summary]
+
+    Parameters
+    ----------
+    events : list of events
+        list of events
+    G : ndarray
+        gradients
+    H : ndarray
+        Hessians
+    scaling : ndarray
+        scaling of model parameters
+    cat : CMTCatalog
+        catalog containing original events
+    damp_type : str, optional
+        damping types, 'all' damps all events equally, 'depth' damps full
+        hessian for all events with depth <70km depth, 'hypo' damps only the
+        hypocenter parameters, by default 'hypo'.
+
+    Returns
+    -------
+    tuple of
+        (change in model parameters for each event and damping value,
+         list of damping values)
+    """
 
     # Damping list
     damping_list = np.logspace(-4, -2, 7)
@@ -50,11 +75,28 @@ def inversion_tests(events, G, H, scaling, cat, hypo_only=False):
     # Scaling array
     scale = np.ones_like(G)
 
+    # Depth
+    depth = cat.getvals(vtype="depth_in_m")
+
     # Damping diagonal matrix
-    if hypo_only:
-        dampd = np.diag(np.array([0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0]))
+    fulldampd = np.diag(np.ones(10))
+    hypodampd = np.diag(np.array([0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0]))
+
+    if damp_type == 'all':
+        fulldamp = np.ones(G.shape[0])
+        hypodamp = np.zeros(G.shape[0])
+    elif damp_type == 'hypo':
+        fulldamp = np.zeros(G.shape[0])
+        hypodamp = np.ones(G.shape[0])
+    elif damp_type == 'depth':
+        fulldamp = np.zeros(G.shape[0])
+        hypodamp = np.zeros(G.shape[0])
+        fulldamp[np.where(depth <= 35000)[0]] = 1
+        hypodamp[np.where(depth > 35000)[0]] = 1
+        print("\n\n", len(np.where(fulldamp == 1)[0]),
+              'v.', len(np.where(hypodamp == 1)[0]), end='\n\n')
     else:
-        dampd = np.diag(np.ones(10))
+        raise ValueError('damping type not implemented.')
 
     for _i, _cmt in enumerate(cat):
 
@@ -68,7 +110,9 @@ def inversion_tests(events, G, H, scaling, cat, hypo_only=False):
             print(
                 f"{100*(_i+1)/G.shape[0]:3.0f}% -- {events[_i]:16} -- {_damp:10f}", end='\r')
             dm[_j, _i, :] = np.linalg.solve(
-                h + _damp * np.trace(h) * dampd,
+                h
+                + _damp * np.trace(h) * fulldamp[_i] * fulldampd
+                + _damp * np.trace(h) * hypodamp[_i] * hypodampd,
                 -g)
 
     dms = dm * scale
@@ -84,11 +128,14 @@ def plot_results(dms, damping_list, cat: CMTCatalog, titles=None):
         dms = deepcopy(dms)
 
     Nrows = len(dms)
-    plt.figure(figsize=(12, 1 + Nrows*1.25))
+    plt.figure(figsize=(8, 1 + Nrows*1.25))
 
     labels = ['$M_{rr}$', '$M_{tt}$', '$M_{pp}$', '$M_{rt}$',
               '$M_{rp}$', '$M_{tp}$', '$t_{cmt}$', '$z$', '$\\theta$', '$\phi$']
-
+    xlabels = [
+        '$d\ln M_{rr}$', '$d\ln M_{tt}$', '$d\ln M_{pp}$', '$d\ln M_{rt}$',
+        '$d\ln M_{rp}$', '$d\ln M_{tp}$',
+        '$\delta t_{cmt}$ [s]', '$\delta z$ [km]', '$\delta \\theta$ [deg]', '$\delta \phi$ [deg]']
     # Get normalizaton
     M0 = cat.getvals(vtype='M0')
 
@@ -105,13 +152,14 @@ def plot_results(dms, damping_list, cat: CMTCatalog, titles=None):
 
         # Get qunatiles of wides range
         dms[i][:, :, :6] = dms[i][:, :, :6]/M0[None, :, None]
-        dms[i][:, :, 7] = dms[i][:, :, 7]/1000.0
+        dms[i][:, :, 7] = dms[i][:, :,  7]/1000.0
 
     xrange = (
         np.quantile(dms[0][0, :, :], 0.02, axis=0),
         np.quantile(dms[0][0, :, :], 0.98, axis=0)
     )
 
+    label_format = '{:6.2f}'
     for i in range(len(dms)):
 
         for j in range(10):
@@ -132,10 +180,33 @@ def plot_results(dms, damping_list, cat: CMTCatalog, titles=None):
                     histtype='stepfilled', edgecolor=colors[k],
                     facecolor='none', density=True)
 
+            ax.vlines(0, 0, ax.get_ylim()[1], color='k', ls=':', lw=0.75)
+            ax.spines.top.set_visible(False)
+            ax.spines.left.set_visible(False)
+            ax.spines.right.set_visible(False)
+
+            x0, x1 = ax.get_xlim()
+            visible_ticks = [t for t in ax.get_xticks() if t >= x0 and t <= x1]
+            ax.set_xticks(visible_ticks)
+
             if i == len(dms)-1:
-                ax.set_xticklabels(ax.get_xticks(), rotation=-45)
+                ax.set_xticklabels(
+                    [label_format.format(x) for x in ax.get_xticks()],
+                    rotation=45, ha="right")
+                ax.set_xlabel(xlabels[j], fontsize='x-small')
             else:
-                ax.set_xticklabels([])
+                # ax.set_xticklabels([])
+                ax.tick_params(labelbottom=False)
+                pass
+            if j == 0:
+                plt.ylabel(titles[i].capitalize(),
+                           rotation=0, ha='right', va='baseline')
+
+            ax.tick_params(which='both', left=False, right=False,
+                           labelleft=False, labelright=False, top=False,
+                           labeltop=False)
+            # ax.tick_params(which='minor', left=False, right=False,
+            #                labelleft=False, labelright=False, top=False, labeltop=False)
 
         if i == 0:
             ax = plt.subplot(Nrows, 11, 11)
@@ -144,8 +215,8 @@ def plot_results(dms, damping_list, cat: CMTCatalog, titles=None):
                       fontsize='xx-small', title='Damping', frameon=False,
                       borderaxespad=0.0, title_fontsize='x-small')
 
-    plt.subplots_adjust(hspace=0.2, wspace=1.0, left=0.025,
-                        right=0.975, bottom=0.2, top=0.8)
+    plt.subplots_adjust(hspace=0.075, wspace=0.125, left=0.05,
+                        right=0.975, bottom=0.2, top=0.9)
 
 
 def plot_results_M0(dms, damping_list, cat: CMTCatalog, titles=None):
