@@ -13,12 +13,15 @@ Map created for GCMT3D paper.
 
 import os
 from obspy import UTCDateTime
-import lwsspy as lpy
+import lwsspy.seismo as lseis
+import lwsspy.plot as lplt
+import lwsspy.maps as lmap
 import matplotlib.pyplot as plt
 lplt.updaterc()
 
 # Get the GCMT3D data directory
-datadir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+datadir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+figdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Networks used in the Global CMT Project
 networks = ["II", "IU", "IC", "G", "MN", "GE", "CU"]
@@ -33,20 +36,7 @@ xml_name = "gcmt3d_station.xml"
 invfile = os.path.join(datadir, xml_name)
 
 # Write inventory after downloading
-if os.path.exists(invfile):
-    inv = lpy.seismo.read_inventory(invfile)
-else:
-    # Download metadata
-    start = UTCDateTime(1976, 1, 1)
-    end = UTCDateTime.now()
-    duration = end - start
-
-    # Download the data
-    inv = lpy.seismo.download_data(start, duration=duration, network=networksstring,
-                                   station=None, dtype='stations')
-
-    # Write it to the script data directory
-    inv.write(invfile, "STATIONXML")
+inv = lseis.read_inventory(invfile)
 
 # Create Figure
 plt.figure(figsize=(6, 3.5))
@@ -54,10 +44,10 @@ plt.subplots_adjust(bottom=0.05, top=1.0, left=0.01, right=0.99,
                     wspace=0.0)
 
 # Create map axes
-ax = lmaps.map_axes(proj='moll')
+ax = lmap.map_axes(proj='moll', central_longitude=180.0)
 
 # Plot continents
-lmaps.plot_map()
+lmap.plot_map()
 
 # Plot inventory
 lplt.plot_inventory(inv, markersize=7, cmap='Set1')
@@ -69,7 +59,6 @@ plt.legend(loc='lower center', frameon=False, fancybox=False,
            labelspacing=0.2, handlelength=1.0, ncol=ncol,
            columnspacing=1.0)
 
-plt.savefig(os.path.join(lbase.DOCFIGURES, "station_map.svg"), dpi=300,
+plt.savefig(os.path.join(figdir, "station_map.svg"), dpi=300,
             transparent=True)
-plt.savefig(os.path.join(lbase.DOCFIGURES,
-                         "station_map.pdf"), transparent=True)
+plt.savefig(os.path.join(figdir, "station_map.pdf"), transparent=True)
