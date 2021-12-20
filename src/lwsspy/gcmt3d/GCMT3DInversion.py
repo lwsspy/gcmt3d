@@ -5,19 +5,16 @@ CMTSOLUTTION depth.
 # %% Create inversion directory
 
 # Namespace
-from .. import inversion as linv
-from .. import plot as lplt
-from .. import seismo as lseis
-from .. import utils as lutils
-from .. import shell as lshell
-from .. import geo as lgeo
-from .. import math as lmat
-from .. import maps as lmap
-from .. import signal as lsig
-from ..seismo.source import CMTSource
-from ..seismo.process.queue_multiprocess_stream import \
+import lwsspy.inversion as linv
+import lwsspy.plot as lplt
+import lwsspy.seismo as lseis
+import lwsspy.utils as lutils
+import lwsspy.shell as lshell
+import lwsspy.geo as lgeo
+import lwsspy.math as lmat
+from lwsspy.seismo.process.queue_multiprocess_stream import \
     queue_multiprocess_stream
-from ..seismo.window.queue_multiwindow_stream import \
+from lwsspy.seismo.window.queue_multiwindow_stream import \
     queue_multiwindow_stream
 
 # Internal
