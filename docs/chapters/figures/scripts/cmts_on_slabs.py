@@ -1,4 +1,22 @@
+import os
+from lwsspy.plot import updaterc
+from lwsspy.seismo.cmt_catalog import CMTCatalog
 from lwsspy.gcmt3d.plot_slab_cmts import plot_slab_cmts
+import matplotlib.pyplot as plt
+
+# Plot config
+updaterc()
+plt.switch_backend('pdf')
+
+# Dirs
+datadir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+figdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Get catalogs
+oldcat = CMTCatalog.load(os.path.join(
+    datadir, 'gcmt.pkl'))
+newcat = CMTCatalog.load(os.path.join(
+    datadir, 'gcmt3d+_fix.pkl'))
 
 # %%
 
@@ -20,8 +38,8 @@ south_america_shallow_dict = dict(
     c180=False
 )
 
-plot_slab_cmts(south_america_shallow_dict)
-
+plot_slab_cmts(south_america_shallow_dict, oldcat, newcat)
+plt.savefig(os.path.join(figdir, 'SA_shallow.svg'))
 # %%
 
 south_america_deep_dict = dict(
@@ -42,7 +60,8 @@ south_america_deep_dict = dict(
     c180=False
 )
 
-plot_slab_cmts(south_america_deep_dict)
+plot_slab_cmts(south_america_deep_dict, oldcat, newcat)
+plt.savefig(os.path.join(figdir, 'SA_deep.svg'))
 
 # %%
 
@@ -64,7 +83,8 @@ tonga_dict = dict(
     c180=True
 )
 
-plot_slab_cmts(tonga_dict)
+plot_slab_cmts(tonga_dict, oldcat, newcat)
+plt.savefig(os.path.join(figdir, 'tonga_shallow.svg'))
 
 # %%
 tonga_deep_dict = dict(
@@ -86,4 +106,5 @@ tonga_deep_dict = dict(
 )
 
 
-plot_slab_cmts(tonga_deep_dict)
+plot_slab_cmts(tonga_deep_dict, oldcat, newcat)
+plt.savefig(os.path.join(figdir, 'tonga_deep.svg'))

@@ -19,19 +19,13 @@ import os
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-import matplotlib
-import lwsspy as lpy
+import lwsspy.gcmt3d as lgcmt3d
+import lwsspy.plot as lplt
 from matplotlib.colors import ListedColormap
 
 lplt.updaterc()
 
-default_outputdir = os.path.join(
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__)))),
-    "gcmt3d"
-)
+default_outputdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def sac_cosine_taper(freqs, flimit):
@@ -87,7 +81,7 @@ def plot_taper(magnitude, *args, ax=None, outdir=None, **kwargs):
     endmag = 8.0
 
     # Compute corners
-    corners = lpy.gcmt3d.filter_scaling(
+    corners = lgcmt3d.filter_scaling(
         startcorners, startmag, endcorners, endmag, magnitude)
 
     # Compute tapers
@@ -118,8 +112,8 @@ def plot_tapers(ax=None, outdir=None):
 
     for _i, mm in enumerate(m):
         # Compute corners
-        corners[:, _i] = lpy.gcmt3d.filter_scaling(startcorners, startmag,
-                                                   endcorners, endmag, mm)
+        corners[:, _i] = lgcmt3d.filter_scaling(startcorners, startmag,
+                                                endcorners, endmag, mm)
         # Compute tapers
         tapers[:, _i] = sac_cosine_taper(p, corners[:, _i])
 
@@ -137,7 +131,8 @@ def plot_tapers(ax=None, outdir=None):
     # plt.ylabel(r"$M_w$")
 
     if outdir is not None:
-        plt.savefig(os.path.join(outdir, "taperperiodmagnitude.png"), dpi=300)
+        plt.savefig(os.path.join(outdir, "taperperiodmagnitude.pdf"))
+        plt.savefig(os.path.join(outdir, "taperperiodmagnitude.svg"), dpi=300)
 
 
 def plot_weighting(outdir=None):
@@ -158,7 +153,7 @@ def plot_weighting(outdir=None):
 
     for _i, m in enumerate(mw):
 
-        P = lpy.gcmt3d.ProcessParams(m, 150000)
+        P = lgcmt3d.ProcessParams(m, 150000)
         P.determine_all()
         # assign
         bodywaveweights[_i] = P.bodywave_weight
@@ -211,7 +206,7 @@ def plot_weighting(outdir=None):
     axins = ax2.inset_axes([-0.05, 0.8, 0.4, 0.25])
     axins.set_rasterization_zorder(-5)
 
-    P2 = lpy.gcmt3d.ProcessParams(Mw, 150000)
+    P2 = lgcmt3d.ProcessParams(Mw, 150000)
     P2.determine_all()
 
     # Corners
@@ -245,7 +240,12 @@ def plot_weighting(outdir=None):
     # ax2.indicate_inset_zoom(axins)
 
     if outdir is not None:
-        plt.savefig(os.path.join(outdir, "waveweighting.pdf"), dpi=900)
+        plt.savefig(os.path.join(outdir, "waveweighting.pdf"),
+                    transparent=True)
+        plt.savefig(os.path.join(outdir, "waveweighting.svg"),
+                    transparent=True)
+        plt.savefig(os.path.join(outdir, "waveweighting.png"),
+                    transparent=True)
     else:
         plt.show()
 

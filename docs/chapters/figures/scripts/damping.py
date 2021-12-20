@@ -1,3 +1,14 @@
+"""
+This script generates a figure that compares different damping styles.
+
+Full diagonal vs. only hypocenter vs. full only for shallow events and otherwise
+hypocenter only.
+
+It uses the original GCMT catalog, Hessians, gradients, and scaling used 
+as a part of the GCMT3D study.
+
+"""
+
 import os
 import matplotlib.pyplot as plt
 from lwsspy.gcmt3d.plot_inversion_distributions import get_stuff
@@ -14,18 +25,23 @@ figdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 catfile = os.path.join(datadir, 'gcmtcatalog.pkl')
 inversionfile = os.path.join(datadir, 'inversion.npz')
 scalingfile = os.path.join(datadir, 'scaling.txt')
-outfile = os.path.join(figdir, 'damping_mt.pdf')
+outfile = os.path.join(figdir, 'damping_mt.svg')
 
-
-dms = []
+# Load all necessary parameters
+# G are the gradients, H are the Hessians, scaling is the scaling file.
 events, G, H, scaling, cat = get_stuff(
     inversionfile, scalingfile, catfile)
+
+# Compute different dampings for each style of damping
+dms = []
 dampstyles = ['all', 'depth', 'hypo']
 for _dtype in dampstyles:
-    _dms, scalinglist = inversion_tests(
+    _dms, dampinglist = inversion_tests(
         events, G, H, scaling, cat, damp_type=_dtype)
     dms.append(_dms)
-dampinglist = scalinglist
+
+# Plot the results
 plot_results(dms, dampinglist, cat, titles=dampstyles)
 
+# Save the plot
 plt.savefig(outfile)

@@ -36,7 +36,8 @@ def get_stuff(inversionfile, scaling_file, catalog) -> tuple:
     return events, G, H, scaling, cat
 
 
-def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
+def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo',
+                    zerotrace: bool = True):
     """[summary]
 
     Parameters
@@ -55,6 +56,9 @@ def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
         damping types, 'all' damps all events equally, 'depth' damps full
         hessian for all events with depth <70km depth, 'hypo' damps only the
         hypocenter parameters, by default 'hypo'.
+    zerotrace : bool
+        Whether the inversion should be constrained to keep the trace of the
+        moment tensor zerotrace.
 
     Returns
     -------
@@ -69,19 +73,59 @@ def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
     # Initialize an array for model changes for all events and all dampings
     dm = np.zeros((len(damping_list), *G.shape))
 
-    # Initalize M0 array
-    M0 = np.zeros(G.shape[0])
-
     # Scaling array
     scale = np.ones_like(G)
 
     # Depth
     depth = cat.getvals(vtype="depth_in_m")
 
+    # M0
+    M0 = cat.getvals(vtype="M0")
+
+    # Compute Trace for entire Array
+    tr = np.trace(H, axis1=1, axis2=2)
+
     # Damping diagonal matrix
     fulldampd = np.diag(np.ones(10))
     hypodampd = np.diag(np.array([0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0]))
 
+    # Create scaling array
+    s = scaling
+    sdiag = np.diag(scaling)
+
+    # Get Scalar moment of each event
+    M0 = cat.getvals(vtype='M0')
+
+    # Initialize model vectors
+    dm = np.zeros((len(damping_list), *G.shape))
+
+    # Zero trace params
+    zero_trace = True
+    pos = np.arange(10)
+    m, n = H[0, :, :].shape
+
+    # Zero trace things
+    if zerotrace:
+        fulldampd = np.diag(np.ones(11))
+        fulldampd[-1] = 0
+        hypodampd = np.diag(
+            np.array([0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0.0]))
+        h = np.zeros((m+1, n+1))
+        g = np.zeros(m+1)
+        zero_trace_array = np.zeros(11)
+        zero_trace_array[:3] = 1
+        h[:, -1] = zero_trace_array
+        h[-1, :] = zero_trace_array
+        zp = slice(0, -1)
+    else:
+        fulldampd = np.diag(np.ones(10))
+        hypodampd = np.diag(np.array([0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0]))
+        d = np.diag(np.ones(10))
+        h = np.zeros((m, n))
+        g = np.zeros(m)
+        zp = slice(0, m)
+
+    # Dampstyle array
     if damp_type == 'all':
         fulldamp = np.ones(G.shape[0])
         hypodamp = np.zeros(G.shape[0])
@@ -98,26 +142,30 @@ def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
     else:
         raise ValueError('damping type not implemented.')
 
-    for _i, _cmt in enumerate(cat):
+    for _i, (_h, _g, m0, _cmt) in enumerate(zip(H, G, M0, cat)):
 
-        M0[_i] = _cmt.M0
-        scale[_i, :] = scaling
-        scale[_i, :6] = M0[_i]
-        g = G[_i, :] * scale[_i, :]
-        h = np.diag(scale[_i, :]) @ H[_i, :, :] @ np.diag(scale[_i, :])
+        # Fix scaling
+        s[:6] = m0
+        sdiag[pos[:6], pos[:6]] = m0
+
+        # Computed scaled gradient and hessian
+        g[zp] = _g * s
+        h[zp, zp] = sdiag @ _h @ sdiag
+
+        # Zero trace requires the sum of things
+        if zero_trace:
+            g[-1] = np.sum(np.array([_cmt.tensor[:3]]))/m0
 
         for _j, _damp in enumerate(damping_list):
             print(
                 f"{100*(_i+1)/G.shape[0]:3.0f}% -- {events[_i]:16} -- {_damp:10f}", end='\r')
             dm[_j, _i, :] = np.linalg.solve(
                 h
-                + _damp * np.trace(h) * fulldamp[_i] * fulldampd
-                + _damp * np.trace(h) * hypodamp[_i] * hypodampd,
-                -g)
+                + _damp * tr[_i] * fulldamp[_i] * fulldampd
+                + _damp * tr[_i] * hypodamp[_i] * hypodampd,
+                -g)[:10] * s
 
-    dms = dm * scale
-
-    return dms, damping_list
+    return dm, damping_list
 
 
 def inversion_tests_depth(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
@@ -463,7 +511,7 @@ def plot_results_M0(dms, damping_list, cat: CMTCatalog, titles=None):
 def update_catalog(H, G, scaling, cat: CMTCatalog) -> CMTCatalog:
 
     # Damping value
-    damping = 0.001
+    damping = 0.01
 
     # Compute Trace for entire Array
     tr = np.trace(H, axis1=1, axis2=2)
@@ -473,19 +521,23 @@ def update_catalog(H, G, scaling, cat: CMTCatalog) -> CMTCatalog:
     # d[:6, :6] = 0
 
     # Create scaling array
-    M0 = cat.getvals(vtype='M0')
-    sdiag = np.diag(scaling)
-    pos = np.arange(10)
-
-    dm = np.zeros_like(G)
     s = scaling
+    sdiag = np.diag(scaling)
 
+    # Get Scalar moment of each event
+    M0 = cat.getvals(vtype='M0')
+
+    # Initialize model vectors
+    dm = np.zeros_like(G)
+
+    # Zero trace params
     zero_trace = True
+    pos = np.arange(10)
     m, n = H[0, :, :].shape
-
     # Zero trace things
     if zero_trace:
         d = np.diag(np.ones(11))
+        d[-1] = 0
         h = np.zeros((m+1, n+1))
         g = np.zeros(m+1)
         zero_trace_array = np.zeros(11)
