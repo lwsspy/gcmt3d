@@ -120,6 +120,68 @@ def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
     return dms, damping_list
 
 
+def inversion_tests_depth(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo'):
+    """[summary]
+
+    Parameters
+    ----------
+    events : list of events
+        list of events
+    G : ndarray
+        gradients
+    H : ndarray
+        Hessians
+    scaling : ndarray
+        scaling of model parameters
+    cat : CMTCatalog
+        catalog containing original events
+    damp_type : str, optional
+        damping types, 'all' damps all events equally, 'depth' damps full
+        hessian for all events with depth <70km depth, 'hypo' damps only the
+        hypocenter parameters, by default 'hypo'.
+
+    Returns
+    -------
+    tuple of
+        (change in model parameters for each event and damping value,
+         list of damping values)
+    """
+
+    # Damping list
+    damping_list = np.logspace(-4, 0,   7)
+
+    # Initialize an array for model changes for all events and all dampings
+    dm = np.zeros((len(damping_list), *G.shape))
+
+    # Initalize M0 array
+    M0 = np.zeros(G.shape[0])
+
+    # Scaling array
+    scale = np.ones_like(G)
+
+    # Damping diagonal matrix
+    fulldampd = np.diag(np.ones(2))
+
+    for _i, _cmt in enumerate(cat):
+
+        M0[_i] = _cmt.M0
+        scale[_i, :] = scaling
+        g = G[_i, :] * scale[_i, :]
+        h = np.diag(scale[_i, :]) @ H[_i, :, :] @ np.diag(scale[_i, :])
+
+        for _j, _damp in enumerate(damping_list):
+            print(
+                f"{100*(_i+1)/G.shape[0]:3.0f}% -- {events[_i]:16} -- {_damp:10f}", end='\r')
+            dm[_j, _i, :] = np.linalg.solve(
+                h
+                + _damp * np.trace(h) * fulldampd,
+                -g)
+
+    dms = dm * scale
+
+    return dms, damping_list
+
+
 def plot_results(dms, damping_list, cat: CMTCatalog, titles=None):
 
     if isinstance(dms, list) is False:
@@ -176,11 +238,13 @@ def plot_results(dms, damping_list, cat: CMTCatalog, titles=None):
                         plt.plot([], [], label=f"{_damp}", c=colors[k])[0])
 
                 plt.hist(
-                    dms[i][k, :, j], bins=100, range=(xrange[0][j], xrange[1][j]),
+                    dms[i][k, :, j], bins=200, range=(xrange[0][j], xrange[1][j]),
                     histtype='stepfilled', edgecolor=colors[k],
                     facecolor='none', density=True)
 
-            ax.vlines(0, 0, ax.get_ylim()[1], color='k', ls=':', lw=0.75)
+            ax.vlines(
+                0, 0, ax.get_ylim()[1], color='k', ls=':', lw=0.75, zorder=0
+            )
             ax.spines.top.set_visible(False)
             ax.spines.left.set_visible(False)
             ax.spines.right.set_visible(False)
@@ -215,8 +279,106 @@ def plot_results(dms, damping_list, cat: CMTCatalog, titles=None):
                       fontsize='xx-small', title='Damping', frameon=False,
                       borderaxespad=0.0, title_fontsize='x-small')
 
-    plt.subplots_adjust(hspace=0.075, wspace=0.125, left=0.05,
-                        right=0.975, bottom=0.2, top=0.9)
+    plt.subplots_adjust(hspace=0.075, wspace=0.125, left=0.075,
+                        right=0.975, bottom=0.125, top=0.9)
+
+
+def plot_results_depth(dms, damping_list, cat: CMTCatalog, titles=None):
+
+    if isinstance(dms, list) is False:
+        dms = [deepcopy(dms)]
+    else:
+        dms = deepcopy(dms)
+
+    if not titles:
+        titles = [""] * len(dms)
+
+    Nrows = len(dms)
+    plt.figure(figsize=(5, 2))
+
+    labels = ['$t_{cmt}$', '$z$']
+    xlabels = ['$\delta t_{cmt}$ [s]', '$\delta z$ [km]']
+
+    matplotlib.rcParams.update(
+        {
+            'xtick.labelsize': 'xx-small',
+            'ytick.labelsize': 'xx-small',
+        }
+    )
+
+    # Get color
+    colors = pick_colors_from_cmap(len(damping_list), 'rainbow')
+
+    for i in range(len(dms)):
+
+        # Get qunatiles of wides range
+        dms[i][:, :, 1] = dms[i][:, :,  1]/1000.0
+
+    xrange = (
+        np.quantile(dms[0][0, :, :], 0.02, axis=0),
+        np.quantile(dms[0][0, :, :], 0.98, axis=0)
+    )
+
+    label_format = '{:6.2f}'
+    for i in range(len(dms)):
+
+        for j in range(2):
+
+            ax = plt.subplot(Nrows, 3, 3*i + (1+j))
+
+            if i == 0:
+                plt.title(labels[j])
+            pc = []
+            for k, _damp in enumerate(damping_list):
+
+                if i == 0:
+                    pc.append(
+                        plt.plot([], [], label=f"{_damp}", c=colors[k])[0])
+
+                plt.hist(
+                    dms[i][k, :, j], bins=150, range=(xrange[0][j], xrange[1][j]),
+                    histtype='stepfilled', edgecolor=colors[k],
+                    facecolor='none', density=True)
+
+            ax.vlines(
+                0, 0, ax.get_ylim()[1], color='k', ls=':', lw=0.75, zorder=0
+            )
+            ax.spines.top.set_visible(False)
+            ax.spines.left.set_visible(False)
+            ax.spines.right.set_visible(False)
+
+            x0, x1 = ax.get_xlim()
+            visible_ticks = [t for t in ax.get_xticks() if t >= x0 and t <= x1]
+            ax.set_xticks(visible_ticks)
+
+            if i == len(dms)-1:
+                ax.set_xticklabels(
+                    [label_format.format(x) for x in ax.get_xticks()],
+                    rotation=45, ha="right")
+                ax.set_xlabel(xlabels[j], fontsize='x-small')
+            else:
+                # ax.set_xticklabels([])
+                ax.tick_params(labelbottom=False)
+                pass
+            if j == 0:
+                plt.ylabel(titles[i].capitalize(),
+                           rotation=0, ha='right', va='baseline')
+
+            ax.tick_params(which='both', left=False, right=False,
+                           labelleft=False, labelright=False, top=False,
+                           labeltop=False)
+            # ax.tick_params(which='minor', left=False, right=False,
+            #                labelleft=False, labelright=False, top=False, labeltop=False)
+
+        if i == 0:
+            ax = plt.subplot(Nrows, 3, 3)
+            ax.axis('off')
+            ax.legend(pc, [f"{_damp:.4f}" for _damp in damping_list], loc='upper left',
+                      fontsize='xx-small', title='Damping', frameon=False,
+                      borderaxespad=0.0, title_fontsize='x-small')
+
+    plt.subplots_adjust(hspace=0.075, wspace=0.125, left=0.075,
+                        right=1.1, bottom=0.3, top=0.875)
 
 
 def plot_results_M0(dms, damping_list, cat: CMTCatalog, titles=None):
@@ -296,3 +458,77 @@ def plot_results_M0(dms, damping_list, cat: CMTCatalog, titles=None):
 
     plt.subplots_adjust(hspace=0.5, wspace=1.0, left=0.025,
                         right=0.975, bottom=0.2, top=0.8)
+
+
+def update_catalog(H, G, scaling, cat: CMTCatalog) -> CMTCatalog:
+
+    # Damping value
+    damping = 0.001
+
+    # Compute Trace for entire Array
+    tr = np.trace(H, axis1=1, axis2=2)
+
+    # Create damping array
+    d = np.diag(np.ones(10))
+    # d[:6, :6] = 0
+
+    # Create scaling array
+    M0 = cat.getvals(vtype='M0')
+    sdiag = np.diag(scaling)
+    pos = np.arange(10)
+
+    dm = np.zeros_like(G)
+    s = scaling
+
+    zero_trace = True
+    m, n = H[0, :, :].shape
+
+    # Zero trace things
+    if zero_trace:
+        d = np.diag(np.ones(11))
+        h = np.zeros((m+1, n+1))
+        g = np.zeros(m+1)
+        zero_trace_array = np.zeros(11)
+        zero_trace_array[:3] = 1
+        h[:, -1] = zero_trace_array
+        h[-1, :] = zero_trace_array
+
+        zp = slice(0, -1)
+    else:
+        d = np.diag(np.ones(10))
+        h = np.zeros((m, n))
+        g = np.zeros(m)
+        zp = slice(0, m)
+
+    for _i, (_h, _g, m0, _ev) in enumerate(zip(H, G, M0, cat)):
+        # Fix scaling
+        s[:6] = m0
+        sdiag[pos[:6], pos[:6]] = m0
+
+        h[zp, zp] = sdiag @ _h @ sdiag
+        g[zp] = _g * s
+
+        if zero_trace:
+            g[-1] = np.sum(np.array([_ev.tensor[:3]]))/m0
+
+        # Fix Hessians
+        dm[_i, :] = np.linalg.solve(
+            h + damping * tr[_i] * d, -g)[:10] * s
+
+    # Don't change onld catalog, but create new one
+    cat1 = deepcopy(cat)
+
+    for _i, ev in enumerate(cat1):
+        setattr(ev, 'm_rr', ev.m_rr + dm[_i, 0])
+        setattr(ev, 'm_tt', ev.m_tt + dm[_i, 1])
+        setattr(ev, 'm_pp', ev.m_pp + dm[_i, 2])
+        setattr(ev, 'm_rt', ev.m_rt + dm[_i, 3])
+        setattr(ev, 'm_rp', ev.m_rp + dm[_i, 4])
+        setattr(ev, 'm_tp', ev.m_tp + dm[_i, 5])
+        ev.time_shift = ev.time_shift + dm[_i, 6]
+        ev.depth_in_m = ev.depth_in_m + dm[_i, 7]
+        ev.latitude = ev.latitude + dm[_i, 8]
+        ev.longitude = ev.longitude + dm[_i, 9]
+        # ev.update_hdur()
+
+    return cat1
