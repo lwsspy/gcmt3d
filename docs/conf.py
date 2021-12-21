@@ -36,8 +36,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.autosectionlabel',
-    'myst_parser',
-    'numpydoc',
+    'sphinx_copybutton',
+    'sphinx.ext.napoleon',
 ]
 
 source_suffix = {
@@ -70,7 +70,7 @@ html_title = "LWSSPY - GCMT3D"
 html_logo = "chapters/figures/logo.png"
 html_favicon = "chapters/figures/favicon.ico"
 
-html_theme = 'sphinx_book_theme'
+html_theme = 'pydata_sphinx_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -79,7 +79,21 @@ html_static_path = ['_static']
 
 html_theme_options = {
     "repository_url": "https://github.com/lwsspy/lwsspy.gcmt3d",
-    "use_issues_button": True,
-    "use_repository_button": True,
+}
+
+html_context = {
+    "github_user": 'lwsspy',
+    "github_repo": 'lwsspy.gcmt3d',
+    "github_version": "master",
+    "doc_path": "docs",
+}
+
+html_theme_options = {
+    "external_links": [
+        {"url": "www.globalcmt.org", "name": "Global CMT"}
+    ],
+    "github_url": "https://github.com/lwsspy/lwsspy.gcmt3d",
     "use_edit_page_button": True,
+    "use_edit_page_button": True,
+    "navigation_depth": 2,
 }

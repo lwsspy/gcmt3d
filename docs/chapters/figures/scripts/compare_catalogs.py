@@ -28,4 +28,8 @@ Cfilt = C.filter(maxdict=dict(depth_in_m=30000.0, M0=.5))[0]
 Cfilt.plot_summary()
 
 # Compare two catalogs
-plt.savefig(os.path.join(figdir, 'catalog_comparison.svg'))
+plt.savefig(os.path.join(figdir, 'catalog_comparison.svg'), transparent=True)
+
+# Spatial relocation
+Cfilt.plot_spatial_distribution("location")
+plt.savefig(os.path.join(figdir, "spatial_relocation.svg"), transparent=True)

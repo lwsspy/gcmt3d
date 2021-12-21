@@ -123,6 +123,92 @@ class GCMT3DInversion:
             log2file: bool = True,
             start_label: Optional[str] = None,
             no_init: bool = False):
+        """Main inversion class. It's main input is a CMTSOLUTION file, from
+        which an inversion directory is built, given a set of inputs. At this
+        point it's mainly built around Specfem, but it is not hard to plug in a 
+        different forward modeling technique; see `forward` method.
+
+        Parameters
+        ----------
+        cmtsolutionfile : str
+            As the name suggest the path to a CMTSOLUTION file
+        databasedir : str
+            Main database directory
+        specfemdir : str
+            Which specfem directory to link to the inversion
+        processdict : dict, optional
+            dictionary containing all the processing choices, including 
+            the windowing parameters. This is by far the place where most
+            choices are made, and surely the place to modify if you change the 
+            project away from a global setup, by default processdict
+        pardict : dict, optional
+            choose which parameters to invert for and how to scale them. Note
+            that moment tensor elements are always scaled by the scalar moment, 
+            by default pardict
+        zero_trace : bool, optional
+            if True, the inversion is constrained to have a have zero trace, 
+            by default False
+        duration : float, optional
+            maximum duration of the seismograms used in the inversion, 
+            by default 10800.0
+        starttime_offset : float, optional
+            where to cut of the seismograms in processing, by default -50.0
+        endtime_offset : float, optional
+            where to cut off the seismograms, by default 50.0
+        download_data : bool, optional
+            if true the necessary data is going to be downloaded, 
+            by default True
+        node_login : Optional[str], optional
+            If you want to run the entire workflow from a compute node, you must 
+            redirect the download through the login node. (not recommended), 
+            by default None
+        conda_activation : str, optional
+            how to activate your conda environment on the login node, 
+            by default conda_activation
+        bash_escape : str, optional
+            E.g., To make conda readily available run the bash profile file,
+            by default bash_escape
+        download_dict : dict, optional
+            Dictionary that defines the download parameters. The default
+            dictionary is the one that handles the global cmt case.
+            by default download_dict
+        damping : float, optional
+            value to control the damping of the Gauss-Newton Hessian diagonal, 
+            by default 0.001
+        hypo_damping : float, optional
+            value to control the damping of the Gauss-Newton Hessian diagonal
+            elements that correspond to the hypocenter. Only used if damping 
+            is set to 0.0, by default 0.001
+        weighting : bool, optional
+            Use geographical and azimuthal weighting of the misfit function, 
+            by default True
+        normalize : bool, optional
+            normalize the seismograms trace by trace, by default True
+        overwrite : bool, optional
+            scratch the old inversion directory and overwrite data synthetics 
+            etc., by default False
+        launch_method : str, optional
+            how to launch the simulations, by default "srun -n6 --gpus-per-task=1"
+        process_func : Callable, optional
+            processing function. Only used if multiprocesses is 1, 
+            by default lseis.process_stream
+        window_func : Callable, optional
+            windowing function. Only used if multiprocesses is 1, by default lseis.window_on_stream
+        multiprocesses : int, optional
+            number of cores used for multiprocessing, by default 20
+        loglevel : int, optional
+            Choose how much you want to see in log file, by default logging.DEBUG
+        log2stdout : bool, optional
+            as the name suggests pipes the log to the standard out, 
+            by default True
+        log2file : bool, optional
+            as the name suggests pipes the log to a file, by default True
+        start_label : Optional[str], optional
+            which label to start from, by default None, in which case the label
+            will be set to '_gcmt'
+        no_init : bool, optional
+            [description], by default False
+        """
 
         # CMTSource
         self.cmtsource = lseis.CMTSource.from_CMTSOLUTION_file(
@@ -206,6 +292,17 @@ class GCMT3DInversion:
         self.iteration = 0
 
     def __basic_check__(self):
+        """Checking keys of the parameter dictionary. For supported 
+
+        Raises
+        ------
+        ValueError
+            If parameter is not supported yet.
+        ValueError
+            Cannot invert for a single moment tensor parameter.
+        ValueError
+            zerotrace condition requires moment tensor parameters.
+        """
 
         # Check Parameter dict for wrong parameters
         for _par in self.pardict.keys():
@@ -234,6 +331,9 @@ class GCMT3DInversion:
                                  "Update your pardict.")
 
     def __setup_logger__(self):
+        """Setting up logging.
+        """
+
         # create logger
         self.logger = logging.getLogger(f"GCMT3D-{self.cmtsource.eventname}")
         self.logger.setLevel(self.loglevel)
@@ -268,6 +368,10 @@ class GCMT3DInversion:
             plogger=self.logger.info)
 
     def adapt_processdict(self):
+        """This is a fairly important method because it implements the 
+        magnitude dependent processing scheme of the Global CMT project.
+        Depending on the magnitude, and depth, the methods chooses which
+        wavetypes and passbands are going to be used in the inversion."""
 
         # Logging
         lutils.log_action(
@@ -280,7 +384,9 @@ class GCMT3DInversion:
 
         # Adjust the process dictionary
         for _wave, _process_dict in proc_params.items():
+
             if _wave in self.processdict:
+
                 # Adjust weight or drop wave altogether
                 if _process_dict['weight'] == 0.0 \
                         or _process_dict['weight'] is None:
@@ -298,6 +404,7 @@ class GCMT3DInversion:
                 # given to the class
                 self.processdict[_wave]['process']['relative_endtime'] = \
                     _process_dict["relative_endtime"]
+
                 if self.processdict[_wave]['process']['relative_endtime'] \
                         > self.duration:
                     self.processdict[_wave]['process']['relative_endtime'] \
@@ -307,6 +414,7 @@ class GCMT3DInversion:
                 for _windict in self.processdict[_wave]["window"]:
                     _windict["config"]["min_period"] = \
                         _process_dict["filter"][3]
+
                     _windict["config"]["max_period"] = \
                         _process_dict["filter"][0]
 
@@ -315,6 +423,7 @@ class GCMT3DInversion:
         for _wave in self.processdict.keys():
             if _wave not in proc_params:
                 popkeys.append(_wave)
+
         for _key in popkeys:
             self.processdict.pop(_key, None)
 
@@ -325,6 +434,9 @@ class GCMT3DInversion:
             self.processdict, os.path.join(self.cmtdir, "process.yml"))
 
     def init(self):
+        """Initialization of the directories, logger, processing parameters,
+        waveform dictionaries, data download, and model vector initialization 
+        are run using this function."""
 
         # Initialize directory
         self.__initialize_dir__()
@@ -478,6 +590,8 @@ class GCMT3DInversion:
             self.__process_synt__()
 
     def get_windows(self):
+        """Runs all necessary functions to compute windows of similarity 
+        between synthetics and observed data."""
 
         self.__prep_simulations__()
         self.__write_sources__()
@@ -501,10 +615,14 @@ class GCMT3DInversion:
         self.not_windowed_yet = False
 
     def copy_init_synt(self):
+        """Just copies the initial synthetics so that we can make measurements 
+        plots and measurements after inversion."""
+
         # Copy the initial waveform dictionary
         self.synt_dict_init = deepcopy(self.synt_dict)
 
     def __compute_weights__(self):
+        """Computing the geographical and azimuthal weights."""
 
         # Computing the weights
         lutils.log_bar("Computing Weights", plogger=self.logger.info)
@@ -630,6 +748,8 @@ class GCMT3DInversion:
             cPickle.dump(deepcopy(self.weights), f)
 
     def process_all_synt(self):
+        """Runs all processing function on synthetic seismograms and 
+        corresponding Frechet derivatives."""
 
         # Logging
         lutils.log_section(
@@ -646,6 +766,8 @@ class GCMT3DInversion:
             self.__process_synt_par__()
 
     def __get_number_of_forward_simulations__(self):
+        """Computes the number of necessary forward simulations. E.g. we don't
+        need a simulation for the centroid time_shift."""
 
         # For normal forward synthetics
         self.nsim = 1
@@ -656,6 +778,8 @@ class GCMT3DInversion:
                 self.nsim += 1
 
     def __download_data__(self):
+        """Uses the download dictionary parameters to download the data 
+        necessary for the inversion"""
 
         # Setup download times depending on input...
         # Maybe get from process dict?
