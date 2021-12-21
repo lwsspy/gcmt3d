@@ -829,6 +829,10 @@ class GCMT3DInversion:
                 raise ValueError("Download not successful.")
 
     def __load_data__(self):
+        """Loads the data into the prepared waveform dictionaries one for each
+        wavetype.
+        """
+
         lutils.log_action("Loading the data", plogger=self.logger.info)
 
         # Load Station data
@@ -838,11 +842,14 @@ class GCMT3DInversion:
         # Load seismic data
         self.data = read(os.path.join(self.waveformdir, "*.mseed"))
         self.raw_data = self.data.copy()
+
         # Populate the data dictionary.
         for _wtype, _stream in self.data_dict.items():
             self.data_dict[_wtype] = self.data.copy()
 
     def __process_data__(self):
+        """Function that runs the processing function on the data using 
+        the wavetype specific processing parameters. """
 
         # Process each wavetype.
         for _wtype, _stream in self.data_dict.items():
@@ -882,6 +889,9 @@ class GCMT3DInversion:
                     _stream, processdict, nproc=self.multiprocesses)
 
     def __load_synt__(self):
+        """Loads the synthetics into the prepared waveform dictionaries one for
+        each wavetype. 
+        """
 
         # if self.specfemdir is not None:
         # Load forward data
@@ -894,6 +904,10 @@ class GCMT3DInversion:
             self.synt_dict[_wtype]["synt"] = temp_synt.copy()
 
     def __load_synt_par__(self):
+        """Loads the frechet derivatives into the prepared waveform dictionaries
+        one for each wavetype. 
+        """
+
         # Load frechet data
         lutils.log_action("Loading parameter synthetics",
                           plogger=self.logger.info)
@@ -915,6 +929,8 @@ class GCMT3DInversion:
         del temp_synt
 
     def __process_synt__(self, no_grad=False):
+        """Process the synthetics using the processing functions and
+        parameters."""
 
         if self.multiprocesses > 1:
             parallel = True
@@ -964,6 +980,8 @@ class GCMT3DInversion:
             # p.close()
 
     def __process_synt_par__(self):
+        """Process the frechet derivatives using the processing functions and
+        parameters."""
 
         if self.multiprocesses > 1:
             parallel = True
@@ -1037,6 +1055,10 @@ class GCMT3DInversion:
             # p.close()
 
     def __window__(self):
+        """If both synthetics and observed data have been processed, they can
+        be window according to their similarity. This function handles the
+        computation of windows according to wavetype and windowing parameters
+        in the wave type dictionary."""
 
         # Debug flag
         debug = True if self.loglevel >= 20 else False
@@ -1084,6 +1106,9 @@ class GCMT3DInversion:
                     _tr.stats.windows = []
 
     def merge_windows(self, data_stream: Stream, synt_stream: Stream):
+        """After windowing, the windows are often directly adjacent. In such
+        cases, we can simply unite the windows. The `merge_windows` method 
+        calls the appropriate functions to handle that."""
 
         for obs_tr in data_stream:
             try:
@@ -1102,6 +1127,12 @@ class GCMT3DInversion:
                     obs_tr, synt_tr)
 
     def optimize(self, optim: linv.Optimization):
+        """The main driver of the inversion process. Given an optimization 
+        structure this function will optimize the moment tensor. 
+        It's important to note that the optimization struct is agnostic to the 
+        problem. It only cares about cost, gradient, and hessian that are
+        provided by the compute_cost_gradient_hessian function, given a 
+        certain model vector."""
 
         try:
             if self.zero_trace:
@@ -1116,6 +1147,8 @@ class GCMT3DInversion:
             return optim
 
     def __prep_simulations__(self):
+        """This function prepares the parameter files for the 
+        forward simulations depending on stations, frechet derivatives etc."""
 
         lutils.log_action("Prepping simulations", plogger=self.logger.info)
         # Create forward directory
@@ -1187,12 +1220,21 @@ class GCMT3DInversion:
                 lseis.write_parfile(dsyn_pars, dsyn_parfile)
 
     def __update_cmt__(self, model):
+        """Given a scaled model vector update the current cmtsource.
+
+        Parameters
+        ----------
+        model : ndarray
+            scaled model vector
+        """
         cmt = deepcopy(self.cmtsource)
         for _par, _modelval in zip(self.pars, model * self.scale):
             setattr(cmt, _par, _modelval)
         self.cmt_out = cmt
 
     def __write_sources__(self):
+        """Writes the source files into the corresponding simulation
+        directories for the synthetics and the frechet derivatives."""
 
         # Update cmt solution with new model values
         cmt = deepcopy(self.cmtsource)
