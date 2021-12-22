@@ -5,8 +5,8 @@ from typing import Optional
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from obspy import Stream
-from ...seismo.plot_seismogram import plot_seismogram_by_station
-from ...seismo.source import CMTSource
+from ..seismo.plot_seismogram import plot_seismogram_by_station
+from ..seismo.source import CMTSource
 
 
 def read_traces(wtypes, streamdir):

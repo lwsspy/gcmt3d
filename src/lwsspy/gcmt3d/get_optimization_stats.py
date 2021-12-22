@@ -3,6 +3,45 @@ import os
 from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import List
+import pandas as pd
+
+
+def get_files(databases: List[str], verbose: bool = True):
+
+    # Get all cmts in database
+    cmts = os.listdir(databases[0])
+
+    filetable = []
+    cmtf = []
+    for cmt in cmts:
+        row = []
+
+        try:
+            # For each database
+            for _db in databases:
+
+                # See whether
+                file = os.path.join(_db, cmt, 'summary.npz')
+
+                # The summary file exists
+                if os.path.exists(file):
+
+                    # Then append it to the row
+                    row.append(file)
+
+                else:
+                    raise FileNotFoundError
+
+        except FileNotFoundError as e:
+
+            if verbose:
+                print(f"{cmt:13s} not found in {_db}")
+
+        filetable.append(row)
+        cmtf.append(row)
+
+    return cmtf, filetable
 
 
 def get_optimization_stats(database):

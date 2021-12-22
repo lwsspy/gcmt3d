@@ -5,23 +5,18 @@ import matplotlib.pyplot as plt
 from scipy.spatial import kdtree
 from lwsspy.geo.plot_slab_slices import plot_slab_slices
 from lwsspy.math.SphericalNN3D import SphericalNN3D
-from lwsspy.seismo.cmt_catalog import CMTCatalog
 from lwsspy.maps.plot_line_buffer import plot_line_buffer
-from lwsspy.maps.scalebar import scale_bar
+# from lwsspy.maps.scalebar import scale_bar
 
 import numpy as np
 
 
-def plot_slab_cmts(slice_dict):
+def plot_slab_cmts(slice_dict, oldcat, newcat):
 
-    # %% Load CMT catalog
-
-    oldcat = CMTCatalog.load(os.path.join('/Users/lucassawade', 'oldcat.pkl'))
-    newcat = CMTCatalog.load(os.path.join('/Users/lucassawade', 'newcat.pkl'))
-
+    # Remove
     ocat, ncat = oldcat.check_ids(newcat)
-    # %% find nearest neighbours
 
+    # Find nearest neighbours
     latitude = ocat.getvals('latitude')
     longitude = ocat.getvals('longitude')
     depth = ocat.getvals('depth_in_m')/1000.0
@@ -30,14 +25,13 @@ def plot_slab_cmts(slice_dict):
     nlongitude = ncat.getvals('longitude')
     ndepth = ncat.getvals('depth_in_m')/1000.0
 
-    # %%
     # Make nan filled arrays for simple line plotting
     intermlon = np.vstack(
         (longitude, nlongitude, np.nan * np.ones_like(longitude))).T.flatten()
     intermlat = np.vstack(
         (latitude, nlatitude, np.nan * np.ones_like(longitude))).T.flatten()
 
-    # %%
+    # Plot the slices
     tracks, mapax, axes, skt, slablist = plot_slab_slices(
         slice_dict=slice_dict)
     z = np.arange(0, 800, 1)
@@ -48,9 +42,9 @@ def plot_slab_cmts(slice_dict):
     # text or plot.
     text_kwargs = dict(family='sans', size='medium', color='k')
     plot_kwargs = dict(linestyle='solid', color='k', linewidth=3.0)
-    scale_bar(mapax, (0.0, 0.5), 500, metres_per_unit=1000, unit_name='km',
-              text_kwargs=text_kwargs,
-              plot_kwargs=plot_kwargs)
+    # scale_bar(mapax, (0.0, 0.5), 500, metres_per_unit=1000, unit_name='km',
+    #           text_kwargs=text_kwargs,
+    #           plot_kwargs=plot_kwargs)
 
     # %%
     counter = 0
@@ -104,8 +98,8 @@ def plot_slab_cmts(slice_dict):
         # d are the distances between them
         d, i, pos = _tree.query(latitude, longitude, qd=depth,
                                 maximum_distance=maxdist)
-        nd, ni, npos = _tree.query(nlatitude[pos], nlongitude[pos], qd=ndepth[pos],
-                                   maximum_distance=2*maxdist)
+        nd, ni, npos = _tree.query(nlatitude[pos], nlongitude[pos],
+                                   qd=ndepth[pos], maximum_distance=2*maxdist)
 
         idx = np.unravel_index(i, _shape)
         zidx = idx[0]

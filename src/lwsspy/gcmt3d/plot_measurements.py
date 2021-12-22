@@ -1,8 +1,10 @@
 # External
 import _pickle as cPickle
 import matplotlib
+from matplotlib.cm import ScalarMappable
 from matplotlib.lines import Line2D
 from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import MultipleLocator
 import matplotlib.pyplot as plt
 from matplotlib import colors
 import numpy as np
@@ -10,11 +12,15 @@ from copy import deepcopy
 from glob import glob
 from typing import Optional
 import os
+import matplotlib.dates as mdates
+import pandas as pd
+
 # Internal
 from lwsspy import plot as lplt
 from lwsspy import base as lbase
 from lwsspy import seismo as lseis
 from lwsspy import math as lmat
+from pandas.core.frame import DataFrame
 
 lplt.updaterc()
 
@@ -109,6 +115,9 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
     else:
         component_bins = [75, 75, 75]
 
+    # Plot centerline for orientation if dist is similar to gaussian..
+    plotcenterline = True if mtype in ["time_shift", "dlna"] else False
+
     if blabel is None:
         blabel = "$m_0$"
 
@@ -178,10 +187,18 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
                             fontsize="small", dist=0.025)
             lplt.plot_label(ax, lbase.abc[counter], location=6, box=False,
                             fontsize="small", dist=0.025)
+
             if no_after is False:
-                ax.set_ylim((0, 1.5*np.max([np.max(nb), np.max(na)])))
+                nmax = np.max([np.max(nb), np.max(na)])
             else:
-                ax.set_ylim((0, 1.5*np.max(nb)))
+                nmax = np.max(nb)
+
+            if plotcenterline:
+                plt.plot([0, 0], [0, 1.1*nmax], "k--", lw=1.00)
+                plt.plot([0, 0], [1.1*nmax, 1.5*nmax], ":",
+                         lw=1.00, c='lightgray', zorder=-1)
+
+            ax.set_ylim((0, 1.5*nmax))
 
             if mtype == "chi":
                 location = 'upper left'
@@ -211,7 +228,7 @@ def plot_measurements(before: dict, after: dict, alabel: Optional[str] = None,
             else:
                 ax.tick_params(labelbottom=False)
             counter += 1
-
+    return fig
     # plt.show(block=False)
 
 
@@ -530,14 +547,14 @@ def get_database_measurements(
         alabel = "after"
 
     # Get all directories
-    cmtlocs = glob(os.path.join(database, '*/measurements*'))
-    cmtlocs = list(set([os.path.dirname(cmtloc) for cmtloc in cmtlocs]))
-    cmtlocs.sort()
+    # cmtlocs = glob(os.path.join(database, '*/measurements*'))
+    cmtlocs = sorted([os.path.join(database, file)
+                     for file in os.listdir(database)])
 
     # Empty measurement lists
     components = ["Z", "R", "T"]
     for _cmtloc in cmtlocs:
-        print(_cmtloc)
+        print(_cmtloc, flush=True)
         try:
             measurement_pickle_before = os.path.join(
                 _cmtloc, f"measurements_{blabel}.pkl"
@@ -545,15 +562,13 @@ def get_database_measurements(
             measurement_pickle_after = os.path.join(
                 _cmtloc, f"measurements_{alabel}.pkl"
             )
-            print(measurement_pickle_before)
-            print(measurement_pickle_after)
             with open(measurement_pickle_before, "rb") as f:
                 measurements_before = cPickle.load(f)
             with open(measurement_pickle_after, "rb") as f:
                 measurements_after = cPickle.load(f)
 
         except Exception as e:
-            print(e)
+            print(f"{_cmtloc} not used:", e, flush=True)
             continue
 
         if "after" not in locals():
@@ -611,7 +626,7 @@ def get_database_measurements(
 def bin():
 
     import argparse
-    updaterc()
+    lplt.updaterc()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--database', dest='database',
@@ -662,7 +677,7 @@ def bin():
 def bin_plot_pickles():
 
     import argparse
-    updaterc()
+    lplt.updaterc()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(dest='before',
@@ -706,3 +721,353 @@ def bin_plot_pickles():
 
     if args.outdir is not None:
         plt.switch_backend(backend)
+
+
+def colorbar_yrmonth(ax, x: bool = True):
+    from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
+
+    # Get locators and formatters
+    years = YearLocator()   # every year
+    months = MonthLocator()  # every month
+    yearsFmt = DateFormatter('%Y')
+
+    # Add to axis
+    if x:
+        ax.xaxis.set_major_locator(years)
+        ax.xaxis.set_major_formatter(yearsFmt)
+        ax.xaxis.set_minor_locator(months)
+    else:
+        ax.yaxis.set_major_locator(years)
+        ax.yaxis.set_major_formatter(yearsFmt)
+        ax.yaxis.set_minor_locator(months)
+
+
+def plot_measurement_summary(table: DataFrame, tcb: bool = False, save: bool = False):
+
+    # Get wtype-comp combos
+    wcomb = list(table.columns[-9:])
+
+    measurements = ['dz', 'dM0', 'dx', 'dt']
+    labels = ['$\Delta$z', '$\Delta M_0$/$M_0$',
+              '$\Delta$x', '$\Delta$t']
+    units = ['km', None, 'km', 's']
+    xlims = [[-30, +30], [-1, +1], [0, 50], [-5.0, 5.0]]
+    xlims = [[-10, +10], [-1, +1], [0, 100], [-2.0, 2.0]]
+    # xlims = [[-100, +100], [-200, +200], [0, 300], [-30, +30]]
+    # xlims = 4 * [None, None]
+
+    marker = 'o'
+    if len(table) < 100:
+        size = 3
+    else:
+        size = 0.25
+    cmap = 'rainbow'
+    years = pd.DatetimeIndex(
+        mdates.num2date(
+            table['date'].to_numpy()
+        )
+    ).year.to_numpy()
+    bnds = np.arange(np.min(years), np.max(years)+1)
+    norm = colors.BoundaryNorm(bnds, plt.get_cmap(cmap).N)
+    Ntot = np.sum(table[wcomb].to_numpy(), axis=1)
+
+    # minyear = 1980
+    # maxyear = 2000
+    yearbns = [1990, 2000, 2010, 2015, 2025]
+
+    # Figure
+    fig = plt.figure(figsize=(9, 8.0))
+    plt.subplots_adjust(wspace=0.4, left=0.1, right=0.9, hspace=0.3)
+
+    axes = []
+
+    for i in range(len(yearbns)-1):
+
+        pos = np.where((yearbns[i] < years) & (years <= yearbns[i+1]))[0]
+        if len(pos) == 0:
+            continue
+        else:
+            print(len(pos))
+        minyear, maxyear = np.min(years[pos]), np.max(years[pos])
+        N = len(pos)
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 1))
+        plt.scatter(table['dz'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
+                    c=years[pos][::-1], marker=marker, cmap=cmap, norm=norm)
+        plt.xlim(xlims[0])
+        plt.ylabel('N')
+        lplt.plot_label(plt.gca(), f"N: {N}", location=6, box=False)
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta$z [km]')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 2))
+        plt.scatter(table['dM0'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
+                    c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
+        plt.xlim(xlims[1])
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta M_0$/$M_0$')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 3))
+        plt.scatter(table['dt'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
+                    c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
+        plt.xlim(xlims[3])
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta$t [s]')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
+        axes.append(plt.subplot(len(yearbns)-1, 4, i*4 + 4))
+        sc = plt.scatter(table['dx'].iloc[pos][::-1], Ntot[pos][::-1], s=size,
+                         c=years[pos][::-1], marker='o', cmap=cmap, norm=norm)
+        plt.xlim(xlims[2])
+        lplt.plot_label(
+            plt.gca(), f"{minyear}-{maxyear}", location=7, box=False)
+        if i == len(yearbns)-2:
+            plt.xlabel('$\Delta$x [km]')
+        else:
+            plt.gca().tick_params(labelbottom=False)
+
+    if tcb:
+        cb = fig.colorbar(sc, orientation='horizontal',
+                          ax=axes, aspect=40, shrink=0.75, pad=0.15,
+                          fraction=0.05)
+        xminorLocator = MultipleLocator(1)
+        cb.ax.xaxis.set_minor_locator(xminorLocator)
+
+    # plt.savefig('summary.pdf', format='pdf')
+    return
+
+    for m, u, l, xl in zip(measurements, units, labels, xlims):
+
+        plt.figure(figsize=(8, 6))
+        plt.subplots_adjust(left=0.075, right=0.925, hspace=0.3)
+        axes = []
+        for _i, wc in enumerate(wcomb):
+
+            # Create Axes
+            axes.append(plt.subplot(3, 3, _i + 1))
+
+            # Plot the scatter for the category
+            sc = plt.scatter(table[m], table[wc], s=size,
+                             c=years, marker='o', cmap=cmap, norm=norm)
+            plt.xlim(xl)
+            # Labels
+            if _i > 5:
+                plt.xlabel(f'[{u}]')
+            if _i < 3:
+                plt.title(wc.split('-')[1].capitalize())
+            if _i in [0, 3, 6]:
+                plt.ylabel(wc.split('-')[0].capitalize())
+
+        plt.suptitle(f'{l}')
+
+        if tcb:
+            cb = fig.colorbar(ScalarMappable(cmap=cmap, norm=norm), orientation='horizontal',
+                              ax=axes, aspect=60, shrink=1.0, pad=0.1)
+            xminorLocator = MultipleLocator(1)
+            cb.ax.xaxis.set_minor_locator(xminorLocator)
+            # colorbar_yrmonth(cb.ax)
+
+        if save:
+            plt.savefig(f'meas-{m}.pdf', format='pdf')
+
+
+def plot_measurement_summary2(df: DataFrame, tcb: bool = False, save: bool = False):
+
+    years = pd.DatetimeIndex(
+        mdates.num2date(
+            df['date'].to_numpy()
+        )
+    ).year.to_numpy()
+    cmap = plt.get_cmap('rainbow')
+    bnds = np.arange(np.min(years), np.max(years)+1)
+    norm = colors.BoundaryNorm(bnds, plt.get_cmap(cmap).N)
+
+    # Get wtype-comp combos
+    wcomb = list(df.columns[-9:])
+
+    measurements = ['dz', 'dM0', 'dx', 'dt']
+    labels = ['$\Delta$z', '$\Delta M_0$/$M_0$',
+              '$\Delta$x', '$\Delta$t']
+    units = ['km', '', 'km', 's']
+    xlims = [[-30, +30], [-3, +3], [0, 100], [-7.5, +7.5]]
+
+    size = 0.1
+
+    yearbns = [1990, 2025]
+
+    for i in range(len(yearbns)-1):
+
+        fig = plt.figure(figsize=(12, 6))
+        plt.subplots_adjust(wspace=0.4, left=0.05, right=0.95,
+                            top=0.925, bottom=0.025)
+        axes = []
+
+        pos = np.where((yearbns[i] < years) & (years <= yearbns[i+1]))[0]
+        minyear, maxyear = np.min(years[pos]), np.max(years[pos])
+        N = len(pos)
+
+        for i, comb0 in enumerate(measurements):
+            for j, comb1 in enumerate(wcomb[-9:]):
+                # if j>i:
+                #    continue
+                ax = plt.subplot(4, 9, 9*i+j+1)
+                axes.append(ax)
+
+                # if i == j:
+                # plt.hist(df[comb0].iloc[pos], np.linspace(*xlims[i], 100), density=True,
+                #          orientation='horizontal')
+                # plt.ylim(xlims[i])
+                # else:
+                plt.scatter(df[comb1].iloc[pos].iloc[::-1], df[comb0].iloc[pos].iloc[::-1],
+                            c=years[pos][::-1], s=size, cmap=cmap, norm=norm)
+                plt.ylim(xlims[i])
+                if i == 3:
+                    plt.xlabel(f"{comb1.capitalize()}")
+                else:
+                    pass
+                    ax.tick_params(labelbottom=False)
+                if j == 0:
+                    plt.ylabel(f"{labels[i]} [{units[i]}]")
+                else:
+                    ax.tick_params(labelleft=False)
+                print(comb0, comb1)
+
+        fig.suptitle(f"{minyear}-{maxyear}")
+        if tcb:
+            cb = fig.colorbar(ScalarMappable(cmap=cmap, norm=norm),
+                              orientation='horizontal',
+                              ax=axes, aspect=60, shrink=1.0, pad=0.1, fraction=0.1)
+            xminorLocator = MultipleLocator(1)
+            cb.ax.xaxis.set_minor_locator(xminorLocator)
+
+        if save:
+            plt.savefig(f'meas-summary.pdf', format='pdf')
+
+
+def filter_events(df):
+
+    # Get wtype-comp combos
+    wcomb = list(df.columns[-9:])
+
+    # Get total number of measurement
+    Ntot = np.sum(df[wcomb].to_numpy(), axis=1)
+
+    # Get Years
+    years = pd.DatetimeIndex(mdates.num2date(
+        df['date'].to_numpy())).year.to_numpy()
+
+    # Get first section
+    sec0 = np.where((years < 2003) & (Ntot < 200))[0]
+    sec1 = np.where((years >= 2002) & (Ntot < 50))[0]
+    pos = np.hstack((sec1, sec0))
+    #
+
+    return df.iloc[pos]
+
+
+def filter_good_outliers(df):
+
+    # Get wtype-comp combos
+    wcomb = list(df.columns[-9:])
+
+    # Get total number of measurement
+    Ntot = np.sum(df[wcomb].to_numpy(), axis=1)
+
+    # Get Years
+    years = pd.DatetimeIndex(mdates.num2date(
+        df['date'].to_numpy())).year.to_numpy()
+
+    # Get first section
+    dz = np.where((Ntot > 1000) & (np.abs(df['dz']) > 15))[0]
+    dM0 = np.where((Ntot > 1000) & (np.abs(df['dM0']) > 0.4))[0]
+    dx = np.where((Ntot > 1000) & (df['dx'] > 20))[0]
+    dt = np.where((Ntot > 1000) & (np.abs(df['dt']) > 3))[0]
+
+    print('dz:  ', len(dz))
+    print('dM0: ', len(dM0))
+    print('dx:  ', len(dx))
+    print('dt:  ', len(dt))
+
+    pos, c = np.unique(np.hstack((dz, dM0, dx, dt)), return_counts=True)
+    d = pos[c > 1][0]
+
+    print("Ntot: ", Ntot[pos])
+    print("overlap", df['event'].iloc[d])
+    return df.iloc[pos]
+
+
+def plot_eigenvalues(dfs, titles: list = None):
+
+    if isinstance(dfs, DataFrame):
+        dfs = [dfs]
+
+    N = len(dfs)
+
+    if not titles:
+        titles = N*[None]
+
+    plt.figure()
+    c = ['b', 'r']
+    for i in range(N):
+
+        mn = dfs[i].iloc[:, 2:].mean(axis=0).to_numpy()
+        std = dfs[i].iloc[:, 2:].std(axis=0).to_numpy()
+        M = len(mn)
+        x = np.arange(M) + 0.1*i
+        xx = np.tile(x, (len(dfs[i]), 1))
+        # plt.fill_between(x, mn+std, mn-std, color=(0.9, 0.9, 0.9))
+        plt.plot(xx.flatten(), np.log10(dfs[i].iloc[:, 2:].to_numpy().flatten()),
+                 f'{c[i]}.', label=titles[i])
+
+    plt.legend()
+    plt.show()
+
+
+def plot_damping(dfs, titles: list = None):
+
+    if isinstance(dfs, DataFrame):
+        dfs = [dfs]
+
+    N = len(dfs)
+
+    if not titles:
+        titles = N*[None]
+
+    c = lplt.pick_colors_from_cmap(6, 'rainbow')
+
+    plt.figure(figsize=(9, 6))
+    for _i, ev in enumerate(dfs[0]['event']):
+
+        modelnorms = []
+        costs = []
+
+        for i in range(N):
+            modelnorms.append(dfs[i][dfs[i]['event'] == ev].iloc[0, 2])
+            costs.append(dfs[i][dfs[i]['event'] == ev].iloc[0, 3])
+
+        plt.subplot(2, 3, _i + 1)
+        # plt.plot(np.log10(costs), np.log10(modelnorms))
+        plt.plot(costs, modelnorms)
+        handles = []
+        for i in range(N):
+            handles.append(plt.plot(costs[i],
+                                    modelnorms[i], 'o', c=c[i], label=titles[i])[0])
+            # handles.append(plt.plot(np.log10(costs[i]), np.log10(
+            #     modelnorms[i]), 'o', c=c[i], label=titles[i])[0])
+        plt.title(ev)
+        if (_i % 3) == 0:
+            plt.ylabel('l-2 Norm of Model Diff.')
+        if _i >= 2:
+            plt.xlabel('Normalized Cost')
+
+    ax = plt.subplot(2, 3, 6)
+    ax.legend(handles, titles, title='$\\lambda$',
+              loc='lower right', borderaxespad=0.0)
+    ax.axis('off')
+    plt.subplots_adjust(hspace=0.3)
+
+    plt.show()

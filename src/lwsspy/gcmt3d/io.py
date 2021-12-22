@@ -124,3 +124,17 @@ def read_measurements_label(cmtdir: str, label: str):
 
     except Exception:
         return None
+
+
+def get_event_files(database: str, label: str):
+
+    # Get all the event directories in a database
+    dirlist = os.listdir(database)
+
+    # Check whether directory contains a solution with a label
+    files = filter(
+        lambda x: os.path.exists(os.path.join(database, x, f"{x}_{label}")),
+        dirlist)
+
+    # Return list with labeled files
+    return list(map(lambda x: os.path.join(database, x, f"{x}_{label}"), files))

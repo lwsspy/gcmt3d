@@ -4,20 +4,22 @@ CMTSOLUTTION depth.
 """
 # %% Create inversion directory
 
+# Namespace
+import lwsspy.inversion as linv
+import lwsspy.plot as lplt
+import lwsspy.seismo as lseis
+import lwsspy.utils as lutils
+import lwsspy.shell as lshell
+import lwsspy.geo as lgeo
+import lwsspy.math as lmat
+from lwsspy.seismo.process.queue_multiprocess_stream import \
+    queue_multiprocess_stream
+from lwsspy.seismo.window.queue_multiwindow_stream import \
+    queue_multiwindow_stream
+
 # Internal
-from .M0 import get_all_measurements
-from .. import inversion as linv
-from .. import plot as lplt
-from .. import seismo as lseis
-from .. import utils as lutils
-from .. import shell as lshell
-from .. import geo as lgeo
-from .. import math as lmat
-from .. import maps as lmap
-from .. import signal as lsig
-from ..seismo.source import CMTSource
-from ..seismo.process.queue_multiprocess_stream import queue_multiprocess_stream
-from ..seismo.window.queue_multiwindow_stream import queue_multiwindow_stream
+from .process_classifier import ProcessParams
+from .measurements import get_all_measurements
 
 # External
 import os
@@ -25,19 +27,13 @@ import asyncio
 import shutil
 import datetime
 import numpy as np
-from itertools import repeat
 from copy import deepcopy
-from typing import Callable, Union, Optional, List
+from typing import Callable, Union, Optional
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_pdf import PdfPages
 from obspy import read, read_events, Stream, Trace
-from obspy.core import event
-from obspy.core.utcdatetime import UTCDateTime
-import multiprocessing.pool as mpp
 import _pickle as cPickle
-from .process_classifier import ProcessParams
-from .measurements import get_all_measurements
 import logging
 
 lplt.updaterc(rebuild=False)
@@ -66,11 +62,12 @@ processdict = lutils.read_yaml_file(os.path.join(scriptdir, "process.yml"))
 
 download_dict = dict(
     network=",".join(['CU', 'G', 'GE', 'IC', 'II', 'IU', 'MN']),
-    channel="BH*",
-    location="00",
+    channel_priorities=["LH*", "BH*"],
 )
 
-conda_activation = "source /usr/licensed/anaconda3/2020.7/etc/profile.d/conda.sh && conda activate lwsspy"
+conda_activation = (
+    "source /usr/licensed/anaconda3/2020.7/etc/profile.d/conda.sh && "
+    "conda activate lwsspy")
 compute_node_login = "lsawade@traverse.princeton.edu"
 bash_escape = "source ~/.bash_profile"
 parameter_check_list = ['depth_in_m', "time_shift", 'latitude', 'longitude',
@@ -126,6 +123,92 @@ class GCMT3DInversion:
             log2file: bool = True,
             start_label: Optional[str] = None,
             no_init: bool = False):
+        """Main inversion class. It's main input is a CMTSOLUTION file, from
+        which an inversion directory is built, given a set of inputs. At this
+        point it's mainly built around Specfem, but it is not hard to plug in a 
+        different forward modeling technique; see `forward` method.
+
+        Parameters
+        ----------
+        cmtsolutionfile : str
+            As the name suggest the path to a CMTSOLUTION file
+        databasedir : str
+            Main database directory
+        specfemdir : str
+            Which specfem directory to link to the inversion
+        processdict : dict, optional
+            dictionary containing all the processing choices, including 
+            the windowing parameters. This is by far the place where most
+            choices are made, and surely the place to modify if you change the 
+            project away from a global setup, by default processdict
+        pardict : dict, optional
+            choose which parameters to invert for and how to scale them. Note
+            that moment tensor elements are always scaled by the scalar moment, 
+            by default pardict
+        zero_trace : bool, optional
+            if True, the inversion is constrained to have a have zero trace, 
+            by default False
+        duration : float, optional
+            maximum duration of the seismograms used in the inversion, 
+            by default 10800.0
+        starttime_offset : float, optional
+            where to cut of the seismograms in processing, by default -50.0
+        endtime_offset : float, optional
+            where to cut off the seismograms, by default 50.0
+        download_data : bool, optional
+            if true the necessary data is going to be downloaded, 
+            by default True
+        node_login : Optional[str], optional
+            If you want to run the entire workflow from a compute node, you must 
+            redirect the download through the login node. (not recommended), 
+            by default None
+        conda_activation : str, optional
+            how to activate your conda environment on the login node, 
+            by default conda_activation
+        bash_escape : str, optional
+            E.g., To make conda readily available run the bash profile file,
+            by default bash_escape
+        download_dict : dict, optional
+            Dictionary that defines the download parameters. The default
+            dictionary is the one that handles the global cmt case.
+            by default download_dict
+        damping : float, optional
+            value to control the damping of the Gauss-Newton Hessian diagonal, 
+            by default 0.001
+        hypo_damping : float, optional
+            value to control the damping of the Gauss-Newton Hessian diagonal
+            elements that correspond to the hypocenter. Only used if damping 
+            is set to 0.0, by default 0.001
+        weighting : bool, optional
+            Use geographical and azimuthal weighting of the misfit function, 
+            by default True
+        normalize : bool, optional
+            normalize the seismograms trace by trace, by default True
+        overwrite : bool, optional
+            scratch the old inversion directory and overwrite data synthetics 
+            etc., by default False
+        launch_method : str, optional
+            how to launch the simulations, by default "srun -n6 --gpus-per-task=1"
+        process_func : Callable, optional
+            processing function. Only used if multiprocesses is 1, 
+            by default lseis.process_stream
+        window_func : Callable, optional
+            windowing function. Only used if multiprocesses is 1, by default lseis.window_on_stream
+        multiprocesses : int, optional
+            number of cores used for multiprocessing, by default 20
+        loglevel : int, optional
+            Choose how much you want to see in log file, by default logging.DEBUG
+        log2stdout : bool, optional
+            as the name suggests pipes the log to the standard out, 
+            by default True
+        log2file : bool, optional
+            as the name suggests pipes the log to a file, by default True
+        start_label : Optional[str], optional
+            which label to start from, by default None, in which case the label
+            will be set to '_gcmt'
+        no_init : bool, optional
+            [description], by default False
+        """
 
         # CMTSource
         self.cmtsource = lseis.CMTSource.from_CMTSOLUTION_file(
@@ -179,12 +262,15 @@ class GCMT3DInversion:
         self.__get_number_of_forward_simulations__()
         self.not_windowed_yet = True
         self.zero_trace = zero_trace
+        self.hessians = []
+        self.hessians_scaled = []
         # self.zero_energy = zero_energy
         self.damping = damping
         self.hypo_damping = hypo_damping
         self.normalize = normalize
         self.weighting = weighting
         self.weights_rtz = dict(R=1.0, T=1.0, Z=1.0)
+        self.mindepth = 5000.0
 
         # Initialize data dictionaries
         self.data_dict: dict = dict()
@@ -206,6 +292,17 @@ class GCMT3DInversion:
         self.iteration = 0
 
     def __basic_check__(self):
+        """Checking keys of the parameter dictionary. For supported 
+
+        Raises
+        ------
+        ValueError
+            If parameter is not supported yet.
+        ValueError
+            Cannot invert for a single moment tensor parameter.
+        ValueError
+            zerotrace condition requires moment tensor parameters.
+        """
 
         # Check Parameter dict for wrong parameters
         for _par in self.pardict.keys():
@@ -234,6 +331,9 @@ class GCMT3DInversion:
                                  "Update your pardict.")
 
     def __setup_logger__(self):
+        """Setting up logging.
+        """
+
         # create logger
         self.logger = logging.getLogger(f"GCMT3D-{self.cmtsource.eventname}")
         self.logger.setLevel(self.loglevel)
@@ -268,6 +368,10 @@ class GCMT3DInversion:
             plogger=self.logger.info)
 
     def adapt_processdict(self):
+        """This is a fairly important method because it implements the 
+        magnitude dependent processing scheme of the Global CMT project.
+        Depending on the magnitude, and depth, the methods chooses which
+        wavetypes and passbands are going to be used in the inversion."""
 
         # Logging
         lutils.log_action(
@@ -280,7 +384,9 @@ class GCMT3DInversion:
 
         # Adjust the process dictionary
         for _wave, _process_dict in proc_params.items():
+
             if _wave in self.processdict:
+
                 # Adjust weight or drop wave altogether
                 if _process_dict['weight'] == 0.0 \
                         or _process_dict['weight'] is None:
@@ -298,19 +404,26 @@ class GCMT3DInversion:
                 # given to the class
                 self.processdict[_wave]['process']['relative_endtime'] = \
                     _process_dict["relative_endtime"]
-                if self.processdict[_wave]['process']['relative_endtime'] > self.duration:
-                    self.processdict[_wave]['process']['relative_endtime'] = self.duration
+
+                if self.processdict[_wave]['process']['relative_endtime'] \
+                        > self.duration:
+                    self.processdict[_wave]['process']['relative_endtime'] \
+                        = self.duration
 
                 # Adjust windowing config
                 for _windict in self.processdict[_wave]["window"]:
-                    _windict["config"]["min_period"] = _process_dict["filter"][3]
-                    _windict["config"]["max_period"] = _process_dict["filter"][0]
+                    _windict["config"]["min_period"] = \
+                        _process_dict["filter"][3]
+
+                    _windict["config"]["max_period"] = \
+                        _process_dict["filter"][0]
 
         # Remove unnecessary wavetypes
         popkeys = []
         for _wave in self.processdict.keys():
             if _wave not in proc_params:
                 popkeys.append(_wave)
+
         for _key in popkeys:
             self.processdict.pop(_key, None)
 
@@ -321,6 +434,9 @@ class GCMT3DInversion:
             self.processdict, os.path.join(self.cmtdir, "process.yml"))
 
     def init(self):
+        """Initialization of the directories, logger, processing parameters,
+        waveform dictionaries, data download, and model vector initialization 
+        are run using this function."""
 
         # Initialize directory
         self.__initialize_dir__()
@@ -394,27 +510,20 @@ class GCMT3DInversion:
                     _dict["scale"] = self.cmtsource.M0
 
         # Check whether Mrr, Mtt, Mpp are there for zero trace condition
-        # It's important to note here that the zero_trace_array in the following
-        # part is simply the gradient of the constraint with repspect to the
-        # model parameters. For the zero_energy constraint, we explicitly have
-        # have to compute this gradient from measurements, and is therefore
-        # "missing" here
+        # It's important to note here that the zero_trace_array in the
+        # following part is simply the gradient of the constraint with repspect
+        # to the model parameters. For the zero_energy constraint, we
+        # explicitly have have to compute this gradient from measurements,
+        # and is therefore "missing" here
         if self.zero_trace:  # and not self.zero_energy:
 
-            self.zero_trace_array = np.array([1.0 if _par in ['m_rr', 'm_tt', 'm_pp'] else 0.0
-                                              for _par in self.pardict.keys()])
+            self.zero_trace_array = np.array(
+                [1.0 if _par in ['m_rr', 'm_tt', 'm_pp'] else 0.0
+                 for _par in self.pardict.keys()]
+            )
             self.zero_trace_index_array = np.where(
                 self.zero_trace_array == 1.)[0]
             self.zero_trace_array = np.append(self.zero_trace_array, 0.0)
-
-        # elif self.zero_trace and self.zero_energy:
-
-        #     self.zero_trace_array = np.array([1.0 if _par in ['m_rr', 'm_tt', 'm_pp'] else 0.0
-        #                                       for _par in self.pardict.keys()])
-        #     self.zero_trace_index_array = np.where(
-        #         self.zero_trace_array == 1.)[0]
-        #     self.zero_trace_array = np.append(self.zero_trace_array, 0.0)
-        #     self.zero_trace_array = np.append(self.zero_trace_array, 0.0)
 
         # damping settings
         if self.damping > 0.0:
@@ -434,13 +543,18 @@ class GCMT3DInversion:
         # Get the model vector given the parameters to invert for
         self.model = np.array(
             [getattr(self.cmtsource, _par) for _par in self.pardict.keys()])
+        self.model_idxdict = {_par: _i for _i,
+                              _par in enumerate(self.pardict.keys())}
         self.init_model = 1.0 * self.model
         self.pars = [_par for _par in self.pardict.keys()]
 
         # Create scaling vector
-        self.scale = np.array([10**lmat.magnitude(getattr(self.cmtsource, _par))
-                               if _par not in mt_params else _dict['scale']
-                               for _par, _dict in self.pardict.items()])
+        # self.scale = np.array(
+        #     [10**lmat.magnitude(getattr(self.cmtsource, _par))
+        #      if _par not in mt_params else _dict['scale']
+        #      for _par, _dict in self.pardict.items()])
+        self.scale = np.array([_dict['scale']
+                              for _, _dict in self.pardict.items()])
 
         self.scaled_model = self.model/self.scale
         self.init_scaled_model = 1.0 * self.scaled_model
@@ -476,6 +590,8 @@ class GCMT3DInversion:
             self.__process_synt__()
 
     def get_windows(self):
+        """Runs all necessary functions to compute windows of similarity 
+        between synthetics and observed data."""
 
         self.__prep_simulations__()
         self.__write_sources__()
@@ -499,10 +615,14 @@ class GCMT3DInversion:
         self.not_windowed_yet = False
 
     def copy_init_synt(self):
+        """Just copies the initial synthetics so that we can make measurements 
+        plots and measurements after inversion."""
+
         # Copy the initial waveform dictionary
         self.synt_dict_init = deepcopy(self.synt_dict)
 
     def __compute_weights__(self):
+        """Computing the geographical and azimuthal weights."""
 
         # Computing the weights
         lutils.log_bar("Computing Weights", plogger=self.logger.info)
@@ -561,8 +681,8 @@ class GCMT3DInversion:
                         latitudes, longitudes, nbins=12, p=0.5)
 
                     # Save azi weights into dict
-                    self.weights[_wtype][_component]["azimuthal"] = deepcopy(
-                        azi_weights)
+                    self.weights[_wtype][_component]["azimuthal"] \
+                        = deepcopy(azi_weights)
 
                     # Get Geographical weights
                     gw = lgeo.GeoWeights(latitudes, longitudes)
@@ -570,8 +690,8 @@ class GCMT3DInversion:
                     geo_weights = gw.get_weights(ref)
 
                     # Save geo weights into dict
-                    self.weights[_wtype][_component]["geographical"] = deepcopy(
-                        geo_weights)
+                    self.weights[_wtype][_component]["geographical"] \
+                        = deepcopy(geo_weights)
 
                     # Compute Combination weights.
                     weights = (azi_weights * geo_weights)
@@ -628,6 +748,8 @@ class GCMT3DInversion:
             cPickle.dump(deepcopy(self.weights), f)
 
     def process_all_synt(self):
+        """Runs all processing function on synthetic seismograms and 
+        corresponding Frechet derivatives."""
 
         # Logging
         lutils.log_section(
@@ -644,6 +766,8 @@ class GCMT3DInversion:
             self.__process_synt_par__()
 
     def __get_number_of_forward_simulations__(self):
+        """Computes the number of necessary forward simulations. E.g. we don't
+        need a simulation for the centroid time_shift."""
 
         # For normal forward synthetics
         self.nsim = 1
@@ -654,6 +778,8 @@ class GCMT3DInversion:
                 self.nsim += 1
 
     def __download_data__(self):
+        """Uses the download dictionary parameters to download the data 
+        necessary for the inversion"""
 
         # Setup download times depending on input...
         # Maybe get from process dict?
@@ -703,6 +829,10 @@ class GCMT3DInversion:
                 raise ValueError("Download not successful.")
 
     def __load_data__(self):
+        """Loads the data into the prepared waveform dictionaries one for each
+        wavetype.
+        """
+
         lutils.log_action("Loading the data", plogger=self.logger.info)
 
         # Load Station data
@@ -712,11 +842,14 @@ class GCMT3DInversion:
         # Load seismic data
         self.data = read(os.path.join(self.waveformdir, "*.mseed"))
         self.raw_data = self.data.copy()
+
         # Populate the data dictionary.
         for _wtype, _stream in self.data_dict.items():
             self.data_dict[_wtype] = self.data.copy()
 
     def __process_data__(self):
+        """Function that runs the processing function on the data using 
+        the wavetype specific processing parameters. """
 
         # Process each wavetype.
         for _wtype, _stream in self.data_dict.items():
@@ -750,12 +883,15 @@ class GCMT3DInversion:
                     _stream, **processdict)
             else:
                 lutils.log_action(
-                    f"Processing in parallel using {self.multiprocesses} cores",
+                    f"Parallel processing using {self.multiprocesses} cores",
                     plogger=self.logger.debug)
                 self.data_dict[_wtype] = queue_multiprocess_stream(
                     _stream, processdict, nproc=self.multiprocesses)
 
     def __load_synt__(self):
+        """Loads the synthetics into the prepared waveform dictionaries one for
+        each wavetype. 
+        """
 
         # if self.specfemdir is not None:
         # Load forward data
@@ -768,6 +904,10 @@ class GCMT3DInversion:
             self.synt_dict[_wtype]["synt"] = temp_synt.copy()
 
     def __load_synt_par__(self):
+        """Loads the frechet derivatives into the prepared waveform dictionaries
+        one for each wavetype. 
+        """
+
         # Load frechet data
         lutils.log_action("Loading parameter synthetics",
                           plogger=self.logger.info)
@@ -789,6 +929,8 @@ class GCMT3DInversion:
         del temp_synt
 
     def __process_synt__(self, no_grad=False):
+        """Process the synthetics using the processing functions and
+        parameters."""
 
         if self.multiprocesses > 1:
             parallel = True
@@ -838,6 +980,8 @@ class GCMT3DInversion:
             # p.close()
 
     def __process_synt_par__(self):
+        """Process the frechet derivatives using the processing functions and
+        parameters."""
 
         if self.multiprocesses > 1:
             parallel = True
@@ -911,6 +1055,10 @@ class GCMT3DInversion:
             # p.close()
 
     def __window__(self):
+        """If both synthetics and observed data have been processed, they can
+        be window according to their similarity. This function handles the
+        computation of windows according to wavetype and windowing parameters
+        in the wave type dictionary."""
 
         # Debug flag
         debug = True if self.loglevel >= 20 else False
@@ -958,6 +1106,9 @@ class GCMT3DInversion:
                     _tr.stats.windows = []
 
     def merge_windows(self, data_stream: Stream, synt_stream: Stream):
+        """After windowing, the windows are often directly adjacent. In such
+        cases, we can simply unite the windows. The `merge_windows` method 
+        calls the appropriate functions to handle that."""
 
         for obs_tr in data_stream:
             try:
@@ -976,6 +1127,12 @@ class GCMT3DInversion:
                     obs_tr, synt_tr)
 
     def optimize(self, optim: linv.Optimization):
+        """The main driver of the inversion process. Given an optimization 
+        structure this function will optimize the moment tensor. 
+        It's important to note that the optimization struct is agnostic to the 
+        problem. It only cares about cost, gradient, and hessian that are
+        provided by the compute_cost_gradient_hessian function, given a 
+        certain model vector."""
 
         try:
             if self.zero_trace:
@@ -990,6 +1147,8 @@ class GCMT3DInversion:
             return optim
 
     def __prep_simulations__(self):
+        """This function prepares the parameter files for the 
+        forward simulations depending on stations, frechet derivatives etc."""
 
         lutils.log_action("Prepping simulations", plogger=self.logger.info)
         # Create forward directory
@@ -1054,18 +1213,28 @@ class GCMT3DInversion:
                     dsyn_pars["USE_SOURCE_DERIVATIVE"] = False
 
                 # Adapt duration
-                dsyn_pars["RECORD_LENGTH_IN_MINUTES"] = self.simulation_duration
+                dsyn_pars["RECORD_LENGTH_IN_MINUTES"] \
+                    = self.simulation_duration
 
                 # Write Stuff to Par_file
                 lseis.write_parfile(dsyn_pars, dsyn_parfile)
 
     def __update_cmt__(self, model):
+        """Given a scaled model vector update the current cmtsource.
+
+        Parameters
+        ----------
+        model : ndarray
+            scaled model vector
+        """
         cmt = deepcopy(self.cmtsource)
         for _par, _modelval in zip(self.pars, model * self.scale):
             setattr(cmt, _par, _modelval)
         self.cmt_out = cmt
 
     def __write_sources__(self):
+        """Writes the source files into the corresponding simulation
+        directories for the synthetics and the frechet derivatives."""
 
         # Update cmt solution with new model values
         cmt = deepcopy(self.cmtsource)
@@ -1192,35 +1361,47 @@ class GCMT3DInversion:
             self.__window__()
             self.not_windowed_yet = False
 
-        return self.__compute_cost__(), self.__compute_gradient__() * self.scale
+        return (
+            self.__compute_cost__(), self.__compute_gradient__() * self.scale
+        )
 
     def compute_cost_gradient_hessian(self, model):
 
         # Update model
-        if self.zero_trace:  # and not self.zero_energy:
-            mu = model[-1]
-            self.model = model[:-1] * self.scale
-            self.scaled_model = model[:-1]
-        else:
-            self.model = model * self.scale
-            self.scaled_model = model
+        if self.zero_trace:
 
-        # elif self.zero_trace and self.zero_energy:
-        #     mu = model[-2:]
-        #     self.model = model[:-2] * self.scale
-        #     self.scaled_model = model[:-2]
-        # elif not self.zero_trace and self.zero_energy:
-        #     mu = model[-1]
-        #     self.model = model[:-1] * self.scale
-        #     self.scaled_model = model[:-1]
+            # Read in model
+            self.model = model[:-1] * self.scale
+
+            # Fix depth to 5 km
+            if self.model[self.model_idxdict['depth_in_m']] < self.mindepth:
+                self.model[self.model_idxdict['depth_in_m']] = self.mindepth
+
+            # Scale model again
+            self.scaled_model = self.model / self.scale
+        else:
+
+            # Read in model
+            self.model = model * self.scale
+
+            # Fix depth to 5 km
+            if self.model[self.model_idxdict['depth_in_m']] < self.mindepth:
+                self.model[self.model_idxdict['depth_in_m']] = self.mindepth
+
+            # Scale model again
+            self.scaled_model = self.model / self.scale
 
         # Write sources for next iteration
         self.__write_sources__()
 
         # Run the simulations
         if self.iteration == 0:
+
+            # First set of forward simulations where run when for windowing
             pass
+
         else:
+            # Run simulations with the updated sources
             with lutils.Timer(plogger=self.logger.info):
                 self.__run_simulations__()
 
@@ -1236,6 +1417,9 @@ class GCMT3DInversion:
         cost = self.__compute_cost__()
         g, h = self.__compute_gradient_and_hessian__()
 
+        # Raw hessian
+        self.hessians.append(h.flatten())
+
         # Get normalization factor at the first iteration
         if self.iteration == 0:
             self.cost_norm = cost
@@ -1243,11 +1427,6 @@ class GCMT3DInversion:
 
         # Normalize the cost using the first cost calculation
         cost /= self.cost_norm
-
-        # Compute the log energy cost grad and hessian
-        # if self.zero_energy:
-        #     c_log = self.__compute_cost_log__()
-        #     g_log, h_log = self.__compute_gradient_and_hessian_log__()
 
         self.logger.debug("Raw")
         self.logger.debug(f"C: {cost}")
@@ -1260,11 +1439,9 @@ class GCMT3DInversion:
         g *= self.scale
         h = np.diag(self.scale) @ h @ np.diag(self.scale)
 
-        # Scaling the log energy cost grad and hessian
-        # if self.zero_energy:
-        #     g_log *= self.scale
-        #     h_log = np.diag(self.scale) @ h_log @ np.diag(self.scale)
-
+        # scaled hessian
+        self.hessians_scaled.append(h.flatten())
+        print(self.hessians_scaled)
         self.logger.debug("Scaled")
         self.logger.debug(f"C: {cost}")
         self.logger.debug("G:")
@@ -1274,12 +1451,12 @@ class GCMT3DInversion:
 
         if self.damping > 0.0:
             factor = self.damping * np.max(np.abs((np.diag(h))))
-            self.logger.debug(f"f: {factor}")
             modelres = self.scaled_model - self.init_scaled_model
+
+            self.logger.debug(f"f: {factor}")
             self.logger.debug(f"Model Residual: {modelres.flatten()}")
-            self.logger.debug(f"Cost Before: {cost}")
-            # cost += factor/2 * np.sum(modelres**2)
-            self.logger.debug(f"Cost After: {cost}")
+            self.logger.debug(f"Cost: {cost}")
+
             g += factor * modelres
             h += factor * np.eye(len(self.model))
 
@@ -1291,19 +1468,21 @@ class GCMT3DInversion:
             self.logger.debug(h.flatten())
 
         elif self.hypo_damping > 0.0:
+
             # Only get the hessian elements of the hypocenter
-            hdiag = np.diag(h)[self.hypo_damp_index_array]
+            # hdiag = np.diag(h)[self.hypo_damp_index_array]
+            # factor = self.hypo_damping * np.max(np.abs((hdiag)))
+            factor = self.hypo_damping * np.trace(h)
+            modelres = self.scaled_model - self.init_scaled_model
+
             self.logger.debug("HypoDiag:")
-            self.logger.debug(hdiag)
+            self.logger.debug(np.diag(h))
             self.logger.debug("HypoDamping:")
             self.logger.debug(self.hypo_damping)
-            factor = self.hypo_damping * np.max(np.abs((hdiag)))
             self.logger.debug(f"f: {factor}")
-            modelres = self.scaled_model - self.init_scaled_model
             self.logger.debug(f"Model Residual: {modelres.flatten()}")
-            self.logger.debug(f"Cost Before: {cost}")
-            # cost += factor/2 * np.sum(modelres**2)
-            self.logger.debug(f"Cost After: {cost}")
+
+            # Add damping
             g += factor * modelres
             h += factor * np.diag(self.hypo_damp_array)
 
@@ -1314,7 +1493,7 @@ class GCMT3DInversion:
             self.logger.debug("H")
             self.logger.debug(h.flatten())
 
-            # Add zero trace condition
+        # Add zero trace condition
         if self.zero_trace:  # and not self.zero_energy:
             m, n = h.shape
             hz = np.zeros((m+1, n+1))
@@ -1324,30 +1503,6 @@ class GCMT3DInversion:
             h = hz
             g = np.append(g, 0.0)
             g[-1] = np.sum(self.scaled_model[self.zero_trace_index_array])
-
-        # elif self.zero_trace and self.zero_energy:
-        #     m, n = h.shape
-        #     hz = np.zeros((m+2, n+2))
-        #     hz[:-2, :-2] = h + 1 * h_log
-        #     hz[:, -2] = self.zero_trace_array
-        #     hz[-2, :] = self.zero_trace_array
-        #     hz[:-2, -1] = g_log
-        #     hz[-1, :-2] = g_log
-        #     h = hz
-        #     g = np.append(g, 0.0)
-        #     g = np.append(g, 0.0)
-        #     g[-2] = np.sum(self.scaled_model[self.zero_trace_index_array])
-        #     g[-1] = c_log
-
-        # elif not self.zero_trace and self.zero_energy:
-        #     m, n = h.shape
-        #     hz = np.zeros((m+1, n+1))
-        #     hz[:-1, :-1] = h
-        #     hz[:-1, -1] = g_log
-        #     hz[-1, :-1] = g_log
-        #     h = hz
-        #     g = np.append(g, 0.0)
-        #     g[-1] = c_log
 
             # Show stuf when debugging
             self.logger.debug("Constrained:")
@@ -1446,254 +1601,19 @@ class GCMT3DInversion:
 
         return gradient, hessian
 
-    def __compute_cost_log__(self):
-
-        cost = 0
-        for _wtype in self.processdict.keys():
-
-            cgh = lseis.CostGradHessLogEnergy(
-                data=self.data_dict[_wtype],
-                synt=self.synt_dict[_wtype]["synt"],
-                verbose=True if self.loglevel >= 20 else False,
-                weight=self.weighting)
-            cost += cgh.cost() * self.processdict[_wtype]["weight"]
-        return cost
-
-    def __compute_gradient_and_hessian_log__(self):
-
-        gradient = np.zeros_like(self.model)
-        hessian = np.zeros((len(self.model), len(self.model)))
-
-        for _wtype in self.processdict.keys():
-
-            # Get all perturbations
-            dsyn = list()
-            for _i, _par in enumerate(self.pardict.keys()):
-                dsyn.append(self.synt_dict[_wtype][_par])
-
-            # Create costgradhess class to computte gradient
-            cgh = lseis.CostGradHessLogEnergy(
-                data=self.data_dict[_wtype],
-                synt=self.synt_dict[_wtype]["synt"],
-                dsyn=dsyn,
-                verbose=True if self.loglevel >= 20 else False,
-                weight=self.weighting)
-
-            tmp_g, tmp_h = cgh.grad_and_hess()
-            gradient += tmp_g * self.processdict[_wtype]["weight"]
-            hessian += tmp_h * self.processdict[_wtype]["weight"]
-
-        self.logger.debug("M, G, H:")
-        self.logger.debug(self.model)
-        self.logger.debug(gradient.flatten())
-        self.logger.debug(hessian.flatten())
-
-        return gradient, hessian
-
-    def misfit_walk_depth(self):
-
-        # Start the walk
-        lutils.log_bar("Misfit walk: Depth", plogger=self.logger.info)
-
-        scaled_depths = np.arange(
-            self.cmtsource.depth_in_m - 10000,
-            self.cmtsource.depth_in_m + 10100, 1000)/1000.0
-        cost = np.zeros_like(scaled_depths)
-        grad = np.zeros((*scaled_depths.shape, 1))
-        hess = np.zeros((*scaled_depths.shape, 1, 1))
-        dm = np.zeros((*scaled_depths.shape, 1))
-
-        for _i, _dep in enumerate(scaled_depths):
-
-            lutils.log_section(
-                f"Computing CgH for: {_dep} km",
-                plogger=self.logger.info)
-
-            with lutils.Timer(plogger=self.logger.info):
-                c, g, h = self.compute_cost_gradient_hessian(
-                    np.array([_dep]))
-                lutils.log_action(
-                    f"\n     Iteration for {_dep} km done.",
-                    plogger=self.logger.info)
-            cost[_i] = c
-            grad[_i, :] = g
-            hess[_i, :, :] = h
-
-        # Get the Gauss newton step
-        for _i in range(len(scaled_depths)):
-            dm[_i, :] = np.linalg.solve(
-                hess[_i, :, :], -grad[_i, :])
-
-        plt.switch_backend("pdf")
-        plt.figure(figsize=(12, 4))
-        # Cost function
-        ax = plt.subplot(141)
-        plt.plot(cost, scaled_depths, label="Cost")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("Cost")
-        plt.ylabel("Depth [km]")
-
-        ax = plt.subplot(142, sharey=ax)
-        plt.plot(np.squeeze(grad), scaled_depths, label="Grad")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("Gradient")
-        ax.tick_params(labelleft=False, labelright=False)
-
-        ax = plt.subplot(143, sharey=ax)
-        plt.plot(np.squeeze(hess), scaled_depths, label="Hess")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("G.-N. Hessian")
-        ax.tick_params(labelleft=False, labelright=False)
-
-        ax = plt.subplot(144, sharey=ax)
-        plt.plot(np.squeeze(dm), scaled_depths, label="Step")
-        plt.legend(frameon=False, loc='upper right')
-        plt.xlabel("$\\Delta$m [km]")
-        ax.tick_params(labelleft=False, labelright=False)
-
-        plt.savefig(self.cmtdir + "/misfit_walk_depth.pdf")
-
-        # Start the walk
-        lutils.log_bar("DONE.", plogger=self.logger.info)
-
-    def misfit_walk_depth_times(self):
-        """Pardict containing an array of the walk parameters.
-        Then we walk entirely around the parameter space."""
-
-        # if len(pardict) > 2:
-        #     raise ValueError("Only two parameters at a time.")
-
-        # depths = np.arange(self.cmtsource.depth_in_m - 10000,
-        #                    self.cmtsource.depth_in_m + 10100, 1000)
-        # times = np.arange(-10.0, 10.1, 1.0)
-        depths = np.arange(self.cmtsource.depth_in_m - 5000,
-                           self.cmtsource.depth_in_m + 5100, 1000)
-        times = np.arange(self.cmtsource.time_shift - 5.0,
-                          self.cmtsource.time_shift + 5.1, 1.0)
-        t, z = np.meshgrid(times, depths)
-        cost = np.zeros(z.shape)
-        grad = np.zeros((*z.shape, 2))
-        hess = np.zeros((*z.shape, 2, 2))
-        dm = np.zeros((*z.shape, 2))
-
-        for _i, _dep in enumerate(depths):
-            for _j, _time in enumerate(times):
-
-                c, g, h = self.compute_cost_gradient_hessian(
-                    np.array([_dep, _time]))
-                cost[_i, _j] = c
-                grad[_i, _j, :] = g
-                hess[_i, _j, :, :] = h
-
-        # Get the Gauss newton step
-        damp = 0.001
-        for _i in range(z.shape[0]):
-            for _j in range(z.shape[1]):
-                dm[_i, _j, :] = np.linalg.solve(
-                    hess[_i, _j, :, :] + damp * np.diag(np.ones(2)), - grad[_i, _j, :])
-        plt.switch_backend("pdf")
-        extent = [np.min(t), np.max(t), np.min(z), np.max(z)]
-        aspect = (np.max(t) - np.min(t))/(np.max(z) - np.min(z))
-        plt.figure(figsize=(11, 6.5))
-
-        # Get minimum
-        ind = np.unravel_index(np.argmin(cost, axis=None), cost.shape)
-
-        # Cost
-        ax1 = plt.subplot(3, 4, 9)
-        plt.imshow(cost, interpolation=None, extent=extent, aspect=aspect)
-        lplt.plot_label(ax1, r"$\mathcal{C}$", dist=0)
-        plt.plot(times[ind[0]], depths[ind[1]], "*")
-        c1 = plt.colorbar()
-        c1.ax.tick_params(labelsize=7)
-        c1.ax.yaxis.offsetText.set_fontsize(7)
-        ax1.axes.invert_yaxis()
-        plt.ylabel(r'$z$')
-        plt.xlabel(r'$t$')
-
-        # Gradient
-        ax2 = plt.subplot(3, 4, 6, sharey=ax1)
-        plt.imshow(grad[:, :, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c2 = plt.colorbar()
-        c2.ax.tick_params(labelsize=7)
-        c2.ax.yaxis.offsetText.set_fontsize(7)
-        ax2.tick_params(labelbottom=False)
-        lplt.plot_label(ax2, r"$g_{\Delta t}$", dist=0)
-
-        ax3 = plt.subplot(3, 4, 10, sharey=ax1)
-        plt.imshow(grad[:, :, 0], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c3 = plt.colorbar()
-        c3.ax.tick_params(labelsize=7)
-        c3.ax.yaxis.offsetText.set_fontsize(7)
-        ax3.tick_params(labelleft=False)
-        lplt.plot_label(ax3, r"$g_z$", dist=0)
-        plt.xlabel(r'$\Delta t$')
-
-        # Hessian
-        ax4 = plt.subplot(3, 4, 3, sharey=ax1)
-        plt.imshow(hess[:, :, 0, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c4 = plt.colorbar()
-        c4.ax.tick_params(labelsize=7)
-        c4.ax.yaxis.offsetText.set_fontsize(7)
-        ax4.tick_params(labelbottom=False)
-        lplt.plot_label(ax4, r"$\mathcal{H}_{z,\Delta t}$", dist=0)
-
-        ax5 = plt.subplot(3, 4, 7, sharey=ax1)
-        plt.imshow(hess[:, :, 1, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c5 = plt.colorbar()
-        c5.ax.tick_params(labelsize=7)
-        c5.ax.yaxis.offsetText.set_fontsize(7)
-        ax5.tick_params(labelleft=False, labelbottom=False)
-        lplt.plot_label(ax5, r"$\mathcal{H}_{\Delta t,\Delta t}$", dist=0)
-
-        ax6 = plt.subplot(3, 4, 11, sharey=ax1)
-        plt.imshow(hess[:, :, 0, 0], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c6 = plt.colorbar()
-        c6.ax.tick_params(labelsize=7)
-        c6.ax.yaxis.offsetText.set_fontsize(7)
-        ax6.tick_params(labelleft=False)
-        lplt.plot_label(ax6, r"$\mathcal{H}_{z,z}$", dist=0)
-        plt.xlabel(r'$\Delta t$')
-
-        # Gradient/Hessian
-        ax7 = plt.subplot(3, 4, 8, sharey=ax1)
-        plt.imshow(dm[:, :, 1], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c7 = plt.colorbar()
-        c7.ax.tick_params(labelsize=7)
-        c7.ax.yaxis.offsetText.set_fontsize(7)
-        ax7.tick_params(labelleft=False, labelbottom=False)
-        lplt.plot_label(ax7, r"$\mathrm{d}\Delta$", dist=0)
-
-        ax8 = plt.subplot(3, 4, 12, sharey=ax1)
-        plt.imshow(dm[:, :, 0], interpolation=None,
-                   extent=extent, aspect=aspect)
-        c8 = plt.colorbar()
-        c8.ax.tick_params(labelsize=7)
-        c8.ax.yaxis.offsetText.set_fontsize(7)
-        ax8.tick_params(labelleft=False)
-        lplt.plot_label(ax8, r"$\mathrm{d}z$", dist=0)
-        plt.xlabel(r'$\Delta t$')
-
-        plt.subplots_adjust(hspace=0.2, wspace=0.15)
-        plt.savefig(self.cmtdir + "/SyntheticCostGradHess.pdf")
-
     def plot_data(self, outputdir="."):
         plt.switch_backend("pdf")
         for _wtype in self.processdict.keys():
-            with PdfPages(os.path.join(outputdir, f"data_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"data_{_wtype}.pdf")) as pdf:
                 for obsd_tr in self.data_dict[_wtype]:
                     fig = plot_seismograms(obsd_tr, cmtsource=self.cmtsource,
                                            tag=_wtype)
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-Data-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1777,7 +1697,8 @@ class GCMT3DInversion:
                 self.logger.warning(
                     f"Could load station {network}{station} -- {e}")
             # Plot PDF for each wtype
-            with PdfPages(os.path.join(outputdir, f"{network}.{station}_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"{network}.{station}_{_wtype}.pdf")) as pdf:
                 for component in ["Z", "R", "T"]:
                     try:
                         obsd_tr = obsd.select(
@@ -1787,8 +1708,9 @@ class GCMT3DInversion:
                             station=station, network=network,
                             component=component)[0]
                     except Exception as err:
-                        self.logger.warning(f"Couldn't find obs or syn for NET.STA.COMP:"
-                                            f" {network}.{station}.{component} -- {err}")
+                        self.logger.warning(
+                            f"Couldn't find obs or syn for NET.STA.COMP:"
+                            f" {network}.{station}.{component} -- {err}")
                         continue
 
                     fig = plot_seismograms(obsd_tr, synt_tr, self.cmtsource,
@@ -1796,7 +1718,8 @@ class GCMT3DInversion:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1836,11 +1759,14 @@ class GCMT3DInversion:
 
                             fig = plot_seismograms(
                                 synt_tr, cmtsource=self.cmtsource,
-                                tag=f"{_wtype.capitalize()}-{_par.capitalize()}")
-                            pdf.savefig()  # saves the current figure into a pdf page
+                                tag=f"{_wtype.capitalize()}-"
+                                f"{_par.capitalize()}")
+                            # saves the current figure into a pdf page
+                            pdf.savefig()
                             plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1853,7 +1779,8 @@ class GCMT3DInversion:
         plt.switch_backend("pdf")
         for _wtype in self.processdict.keys():
             self.logger.info(f"Plotting {_wtype} waves")
-            with PdfPages(os.path.join(outputdir, f"windows_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"windows_{_wtype}.pdf")) as pdf:
                 for obsd_tr in self.data_dict[_wtype]:
                     try:
                         synt_tr = self.synt_dict[_wtype]["synt"].select(
@@ -1872,7 +1799,8 @@ class GCMT3DInversion:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    #  object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -1885,17 +1813,19 @@ class GCMT3DInversion:
         plt.switch_backend("pdf")
         for _wtype in self.processdict.keys():
             self.logger.info(f"Plotting {_wtype} waves")
-            with PdfPages(os.path.join(outputdir, f"final_windows_{_wtype}.pdf")) as pdf:
+            with PdfPages(os.path.join(
+                    outputdir, f"final_windows_{_wtype}.pdf")) as pdf:
                 for obsd_tr in self.data_dict[_wtype]:
                     try:
                         synt_tr = self.synt_dict[_wtype]["synt"].select(
                             station=obsd_tr.stats.station,
                             network=obsd_tr.stats.network,
                             component=obsd_tr.stats.component)[0]
-                        init_synt_tr = self.synt_dict_init[_wtype]["synt"].select(
-                            station=obsd_tr.stats.station,
-                            network=obsd_tr.stats.network,
-                            component=obsd_tr.stats.component)[0]
+                        init_synt_tr \
+                            = self.synt_dict_init[_wtype]["synt"].select(
+                                station=obsd_tr.stats.station,
+                                network=obsd_tr.stats.network,
+                                component=obsd_tr.stats.component)[0]
                     except Exception as err:
                         self.logger.warning(
                             "Couldn't find corresponding synt for "
@@ -1908,7 +1838,8 @@ class GCMT3DInversion:
                     pdf.savefig()  # saves the current figure into a pdf page
                     plt.close(fig)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                 d = pdf.infodict()
                 d['Title'] = f"{_wtype.capitalize()}-Wave-PDF"
                 d['Author'] = 'Lucas Sawade'
@@ -2107,7 +2038,8 @@ def bin():
         lutils.log_bar("GN", plogger=gcmt3d.logger.info)
         optim_gn = linv.Optimization("gn")
         optim_gn.logger = gcmt3d.logger.info
-        optim_gn.compute_cost_and_grad_and_hess = gcmt3d.compute_cost_gradient_hessian
+        optim_gn.compute_cost_and_grad_and_hess \
+            = gcmt3d.compute_cost_gradient_hessian
 
         # Set attributes depending on the optimization input parameters
         for key, val in inputdict["optimization"].items():
@@ -2135,6 +2067,8 @@ def bin():
 
         optim_list.append(deepcopy(optim_out))
 
+    print("Hessian list", gcmt3d.hessians_scaled)
+
     # Stuff for L-Curves
     # Get model related things to save
     if gcmt3d.zero_trace:
@@ -2159,6 +2093,7 @@ def bin():
         hessianhistory = optim_out.hsave
         scale = gcmt3d.scale
 
+    hdidx = gcmt3d.hypo_damp_index_array
     cost = optim_out.fcost
     fcost_hist = optim_out.fcost_hist
     fcost_init = optim_out.fcost_init
@@ -2175,7 +2110,12 @@ def bin():
         fcost_hist=fcost_hist,
         fcost_init=fcost_init,
         scale=scale,
-        hessianhistory=hessianhistory
+        damping=damping,
+        hypo_damping=hypo_damping,
+        hypo_damping_index=hdidx,
+        hessianhistory=hessianhistory,
+        hessians=np.array(gcmt3d.hessians),
+        hessians_scaled=np.array(gcmt3d.hessians_scaled)
     )
 
     # To be able to output the current model we need to go back and run one

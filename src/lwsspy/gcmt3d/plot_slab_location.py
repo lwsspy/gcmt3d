@@ -6,10 +6,10 @@ from obspy.imaging.beachball import beach
 from cartopy import crs
 from obspy.geodetics.base import gps2dist_azimuth
 # Internal
-from .. import plot as lplt
-from .. import geo as lgeo
-from .. import maps as lmap
-from .. import seismo as lseis
+import lwsspy.plot as lplt
+import lwsspy.geo as lgeo
+import lwsspy.maps as lmap
+import lwsspy.seismo as lseis
 
 
 def plot_slab_location(cmtsource: lseis.CMTSource, cmtsource2=None,
