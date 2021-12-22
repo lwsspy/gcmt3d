@@ -90,7 +90,7 @@ html_context = {
 
 html_theme_options = {
     "external_links": [
-        {"url": "www.globalcmt.org", "name": "Global CMT"}
+        {"url": "http://www.globalcmt.org", "name": "Global CMT"}
     ],
     "github_url": "https://github.com/lwsspy/lwsspy.gcmt3d",
     "use_edit_page_button": True,
