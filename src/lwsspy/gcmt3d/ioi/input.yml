@@ -1,0 +1,85 @@
+# Inputs. Put full path for safety (~ often isn't recognized by Python)
+database: /Users/lucassawade/testdatabase
+
+# Specfem Directory
+specfem: /scratch/gpfs/lsawade/SpecfemMagic_6/specfem3d_globe
+
+# For the default also the default process parameters are used
+processparams: null
+
+# For launching specfem 
+launch_method: jsrun -n 6 -a 4 -c 4 -g 1
+
+# Define whether to download data or not
+download_data: False
+
+# Maxduration
+duration: 7200
+
+# Whether to constrain the moment tensor to have a zero trace
+zero_trace: False
+
+# Whether to overwrite a previous direcotry completely
+overwrite: False
+
+# Labels for start and final solution "<event_id>_<label>", 
+# Solution label must be set
+start_label: null
+solution_label: "gcmt3d"
+
+# Optimization parameters
+parameters:
+  latitude:
+    scale: 1.0
+    pert: null
+  longitude:
+    scale: 1.0
+    pert: null
+  time_shift:
+    scale: 1.0
+    pert: null
+  depth_in_m:
+    scale: 1.0
+    pert: null
+
+
+optimization:
+  # Regularization fraction of absmax of the Gauss-Newton Hessian
+  damping: 0.01
+
+  # Max iterations
+  niter_max: 5
+
+  # Max linesearches
+  nls_max: 3
+
+  # Stopping criterion relative cost lower than
+  stopping_criterion: 1.0e-2
+
+  # Stopping criterion relative cost change lower than
+  stopping_criterion_cost_change: 1.0e-3
+
+  # Stopping criterion relative modelnorm change lower than
+  stopping_criterion_model: 1.0e-4
+
+  
+  
+  # Other parameters.
+  # m_rr: 
+  #   scale: null
+  #   pert: 1e23
+  # m_tt: 
+  #   scale: null
+  #   pert: 1e23
+  # m_pp: 
+  #   scale: null
+  #   pert: 1e23
+  # m_rt: 
+  #   scale: null
+  #   pert: 1e23
+  # m_rp: 
+  #   scale: null
+  #   pert: 1e23
+  # m_tp: 
+  #   scale: null
+  #   pert: 1e23

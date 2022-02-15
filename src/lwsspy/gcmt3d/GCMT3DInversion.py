@@ -1450,7 +1450,7 @@ class GCMT3DInversion:
         self.logger.debug(h.flatten())
 
         if self.damping > 0.0:
-            factor = self.damping * np.max(np.abs((np.diag(h))))
+            factor = self.damping * np.trace(h) / h.shape[0]
             modelres = self.scaled_model - self.init_scaled_model
 
             self.logger.debug(f"f: {factor}")
@@ -1472,7 +1472,7 @@ class GCMT3DInversion:
             # Only get the hessian elements of the hypocenter
             # hdiag = np.diag(h)[self.hypo_damp_index_array]
             # factor = self.hypo_damping * np.max(np.abs((hdiag)))
-            factor = self.hypo_damping * np.trace(h)
+            factor = self.hypo_damping * np.trace(h) / h.shape[0]
             modelres = self.scaled_model - self.init_scaled_model
 
             self.logger.debug("HypoDiag:")

@@ -161,8 +161,8 @@ def inversion_tests(events, G, H, scaling, cat: CMTCatalog, damp_type='hypo',
                 f"{100*(_i+1)/G.shape[0]:3.0f}% -- {events[_i]:16} -- {_damp:10f}", end='\r')
             dm[_j, _i, :] = np.linalg.solve(
                 h
-                + _damp * tr[_i] * fulldamp[_i] * fulldampd
-                + _damp * tr[_i] * hypodamp[_i] * hypodampd,
+                + _damp * tr[_i] / h.shape[0] * fulldamp[_i] * fulldampd
+                + _damp * tr[_i] / h.shape[0] * hypodamp[_i] * hypodampd,
                 -g)[:10] * s
 
     return dm, damping_list
@@ -222,7 +222,7 @@ def inversion_tests_depth(events, G, H, scaling, cat: CMTCatalog, damp_type='hyp
                 f"{100*(_i+1)/G.shape[0]:3.0f}% -- {events[_i]:16} -- {_damp:10f}", end='\r')
             dm[_j, _i, :] = np.linalg.solve(
                 h
-                + _damp * np.trace(h) * fulldampd,
+                + _damp * np.trace(h) / h.shape[0] * fulldampd,
                 -g)
 
     dms = dm * scale
