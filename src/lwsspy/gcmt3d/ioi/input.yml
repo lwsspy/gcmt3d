@@ -2,13 +2,13 @@
 database: /Users/lucassawade/testdatabase
 
 # Specfem Directory
-specfem: /scratch/gpfs/lsawade/SpecfemMagic_6/specfem3d_globe
+specfem: /scratch/gpfs/lsawade/SpecfemMagic/specfem3d_globe
 
 # For the default also the default process parameters are used
 processparams: null
 
 # For launching specfem 
-launch_method: jsrun -n 6 -a 4 -c 4 -g 1
+launch_method:s srun -n6 --gpus-per-task=1 --ntasks-per-core=1
 
 # Multiprocesses: Number of cores to use for the processing
 multiprocesses: 6
