@@ -24,7 +24,13 @@ class Constants:
             "Par_file": "file",
         },
         "DATABASES_MPI": "link",
-        "OUTPUT_FILES": "dir"
+        "OUTPUT_FILES": {
+            'values_from_mesher.h': "file",
+            'addressing.txt': "file",
+            'gpu_device_info.txt': "file",
+            'gpu_device_mem_usage.txt': "file",
+            'RECORDHEADERS': "file",
+        }
     }
 
     # Parameter lists:
