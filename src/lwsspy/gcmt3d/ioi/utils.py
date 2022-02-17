@@ -3,10 +3,13 @@ import shutil
 import numpy as np
 import _pickle as pickle
 from .constants import Constants
-from .model import write_model, write_model_names, write_scaling
+from .model import read_model_names, write_model, write_model_names, write_scaling
+from lwsspy.seismo.specfem.read_parfile import read_parfile
+from lwsspy.seismo.specfem.write_parfile import write_parfile
 from lwsspy.seismo.source import CMTSource
 from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
 from lwsspy.seismo.specfem.inv2STATIONS import inv2STATIONS
+from lwsspy.seismo.specfem.createsimdir import createsimdir
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from lwsspy.gcmt3d.process_classifier import ProcessParams
 
@@ -83,7 +86,7 @@ def optimdir(inputfile, cmtfilename, get_dirs_only=False):
     datadir = os.path.join(outdir, "data")
     simudir = os.path.join(outdir, "simu")
     ssyndir = os.path.join(simudir, "synt")
-    sfredir = os.path.join(simudir, "frec")
+    sfredir = os.path.join(simudir, "dsdm")
     syntdir = os.path.join(outdir, "synt")
     frecdir = os.path.join(outdir, "frec")
     costdir = os.path.join(outdir, "cost")
@@ -271,3 +274,83 @@ def prepare_stations(metadir):
 
     # Write SPECFEM STATIONS FILE
     inv2STATIONS(inv, os.path.join(metadir, 'STATIONS.txt'))
+
+
+def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
+
+    # Get input params
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # SPECFEM directory
+    specfemdir = inputparams["specfem"]
+
+    # Simulation duration
+    simulation_duration = np.round(inputparams["duration"]/60 * 1.02)
+
+    # Get modelparameter names
+    model_names = read_model_names(metadir)
+
+    # Get specfem
+
+    # Stations file
+    stations_src = os.path.join(metadir, 'STATIONS.txt')
+
+    # Create synthetic directories
+    createsimdir(specfemdir, ssyndir,
+                 specfem_dict=Constants.specfem_dict)
+
+    # Create one simulation directory for each inversion
+    for _i, _mname in enumerate(model_names):
+
+        if _mname in Constants.nosimpars:
+            continue
+        else:
+            # Create
+            pardir = os.path.join(sfredir, f"dsdm{_i:05d}")
+            createsimdir(specfemdir, pardir,
+                         specfem_dict=Constants.specfem_dict)
+
+    # Write stations file for the synthetic directory
+    shutil.copyfile(stations_src, os.path.join(ssyndir, "DATA", "STATIONS"))
+
+    # Update Par_file depending on the parameter.
+    syn_parfile = os.path.join(ssyndir, "DATA", "Par_file")
+    syn_pars = read_parfile(syn_parfile)
+    syn_pars["USE_SOURCE_DERIVATIVE"] = False
+
+    # Adapt duration
+    syn_pars["RECORD_LENGTH_IN_MINUTES"] = simulation_duration
+
+    # Write Stuff to Par_file
+    write_parfile(syn_pars, syn_parfile)
+
+    # Create one simulation directory for each inversion
+    for _i, _mname in enumerate(model_names):
+
+        # Half duration an time-shift don't need extra simulations
+        if _mname not in Constants.nosimpars:
+
+            pardir = os.path.join(sfredir, f"dsdm{_i:05d}")
+
+            # Write stations file
+            # Write stations file for the synthetic directory
+            shutil.copyfile(stations_src, os.path.join(
+                pardir, "DATA", "STATIONS"))
+
+            # Update Par_file depending on the parameter.
+            dsdm_parfile = os.path.join(pardir, "DATA", "Par_file")
+            dsdm_pars = read_parfile(dsdm_parfile)
+
+            # Set data parameters and  write new parfiles
+            if _mname in Constants.locations:
+                dsdm_pars["USE_SOURCE_DERIVATIVE"] = True
+                dsdm_pars["USE_SOURCE_DERIVATIVE_DIRECTION"] = \
+                    Constants.source_derivative[_mname]
+            else:
+                dsdm_pars["USE_SOURCE_DERIVATIVE"] = False
+
+                # Adapt duration
+                dsdm_pars["RECORD_LENGTH_IN_MINUTES"] = simulation_duration
+
+                # Write Stuff to Par_file
+                write_parfile(dsdm_pars, dsdm_parfile)
