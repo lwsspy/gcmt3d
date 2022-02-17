@@ -1,8 +1,26 @@
 import os
 import shutil
+import numpy as np
+import _pickle as pickle
+from .constants import Constants
+from .model import write_model, write_model_names, write_scaling
 from lwsspy.seismo.source import CMTSource
-from lwsspy.utils.io import read_yaml_file
+from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
+from lwsspy.seismo.specfem.inv2STATIONS import inv2STATIONS
+from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from lwsspy.gcmt3d.process_classifier import ProcessParams
+
+
+def write_pickle(filename, obj):
+    with open(filename, 'wb') as f:
+        pickle.dump(obj, f)
+
+
+def read_pickle(filename):
+    with open(filename, 'rb') as f:
+        obj = pickle.load(f)
+
+    return obj
 
 
 def createdir(cdir):
@@ -167,3 +185,89 @@ def adapt_processdict(cmtsource, processdict, duration):
         processdict.pop(_key, None)
 
     return processdict
+
+
+def prepare_inversion_dir(cmtfile, outdir, metadir, inputparamfile):
+
+    # Load CMT solution
+    cmtsource = CMTSource.from_CMTSOLUTION_file(cmtfile)
+
+    # Read parameterfile
+    inputparams = read_yaml_file(inputparamfile)
+
+    # Write the input parameters to the inversion directory (for easy inversion)
+    write_yaml_file(inputparams, os.path.join(outdir, 'input.yml'))
+
+    # Read parameterfile
+    inputparams = read_yaml_file(inputparamfile)
+
+    # start label
+    start_label = '_' + \
+        inputparams['start_label'] if inputparams['start_label'] is not None else ''
+
+    # Get duration from the parameter file
+    duration = inputparams['duration']
+
+    # Get initial processing directory
+    if inputparams["processparams"] is None:
+        processdict = Constants.processdict
+    else:
+        processdict = read_yaml_file(inputparams['processparams'])
+
+    # Adapting the processing dictionary
+    processdict = adapt_processdict(cmtsource, processdict, duration)
+
+    # Writing the new processing file to the directory
+    write_yaml_file(processdict, os.path.join(outdir, 'process.yml'))
+
+    # Writing Original CMTSOLUTION
+    cmtsource.write_CMTSOLUTION_file(
+        os.path.join(metadir, cmtsource.eventname + start_label))
+
+    # Write model with generic name for easy access
+    cmtsource.write_CMTSOLUTION_file(
+        os.path.join(metadir, 'init_model.cmt'))
+
+
+def prepare_model(outdir, metadir, modldir):
+
+    # Get the initial model
+    init_cmt = CMTSource.from_CMTSOLUTION_file(
+        os.path.join(metadir, 'init_model.cmt'))
+
+    # Read parameterfile
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # Get the parameters to invert for
+    parameters = inputparams['parameters']
+
+    # Get model names
+    model_names = list(parameters.keys())
+
+    # Write model names
+    write_model_names(model_names, metadir)
+
+    # Get model vector
+    model_vector = np.array([getattr(init_cmt, key)
+                            for key in parameters.keys()])
+
+    # Write model vector
+    write_model(model_vector, modldir, 0, 0)
+
+    # Get scaling
+    scaling_vector = np.array([val['scale'] for _, val in parameters.items()])
+
+    # Write scaling vector
+    write_scaling(scaling_vector, metadir)
+
+
+def prepare_stations(metadir):
+
+    # Read inventory from the station directory and put into a single stations.xml
+    inv = read_inventory(os.path.join(metadir, 'stations', '*.xml'))
+
+    # Write inventory to a single station directory
+    inv.write(os.path.join(metadir, 'stations.xml'), format='STATIONXML')
+
+    # Write SPECFEM STATIONS FILE
+    inv2STATIONS(inv, os.path.join(metadir, 'STATIONS.txt'))

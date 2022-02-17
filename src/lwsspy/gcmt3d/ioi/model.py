@@ -2,6 +2,24 @@ import os
 import numpy as np
 
 
+def write_scaling(scaling, metadir):
+    np.save(os.path.join(
+        metadir, 'scaling.npy'), scaling)
+
+
+def read_scaling(metadir):
+    return np.load(os.path.join(metadir, 'scaling.npy')).tolist()
+
+
+def write_model_names(model_names, metadir):
+    model_names = np.save(os.path.join(
+        metadir, 'model_names.npy'), np.array(model_names))
+
+
+def read_model_names(metadir):
+    return np.load(os.path.join(metadir, 'model_names.npy')).tolist()
+
+
 def write_model(m, modldir, it, ls=None):
     """Takes in model vector, modldirectory, iteration and linesearch number
     and write model to modl directory.

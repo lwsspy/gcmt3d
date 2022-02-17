@@ -1,7 +1,8 @@
 import os
+from re import L
 from nbformat import read
 import numpy as np
-from lwsspy.utils.io import read_yaml_file, write_yaml_file
+from lwsspy.utils.io import read_yaml_file
 from copy import copy, deepcopy
 
 from py import process
@@ -10,42 +11,47 @@ from .data import write_data, write_data_processed
 from .model import write_model
 from .metadata import write_metadata
 from .gaussian2d import g
-from .utils import adapt_processdict
 from lwsspy.seismo.source import CMTSource
+from lwsspy.seismo.download_waveforms_to_storage import download_waveforms_to_storage
 
 # %% Get Model CMT
 
 
-def get_data(cmtfile, outdir, datadir, modldir, metadir, scaldir, inputparamfile):
+def get_data(outdir: str, datadir: str, metadir: str):
 
     # Load CMT solution
-    cmtsource = CMTSource.from_CMTSOLUTION_file(cmtfile)
+    cmtsource = CMTSource.from_CMTSOLUTION_file(
+        os.path.join(metadir, 'init_model.cmt'))
 
-    # Download params
-    download_dict = dict(
-        network=",".join(['CU', 'G', 'GE', 'IC', 'II', 'IU', 'MN']),
-        channel_priorities=["LH*", "BH*"],
-    )
-
-    # Read parameterfile
-    inputparams = read_yaml_file(inputparamfile)
+    # Read input param file
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
     # Get duration from the parameter file
     duration = inputparams['duration']
 
-    # Get initial processing directory
-    if inputparams["processparams"] is None:
-        processdict = Constants.processdict
+    # Define the waveform and station directory and the
+    waveformdir = os.path.join(datadir, "waveforms")
+    stationdir = os.path.join(metadir, "stations")
+
+    # Download Data Params
+    if inputparams["downloadparams"] is None:
+        download_dict = Constants.download_dict
     else:
-        processdict = read_yaml_file(inputparams['processparams'])
+        download_dict = read_yaml_file(inputparams["downloadparams"])
 
-    # Adapting the processing dictionary
-    processdict = adapt_processdict(cmtsource, processdict, duration)
+    # Start and End time of the download
+    starttime_offset = inputparams["starttime_offset"]
+    endtime_offset = inputparams["endtime_offset"]
+    starttime = cmtsource.cmt_time + starttime_offset
+    endtime = cmtsource.cmt_time + duration + endtime_offset
 
-    # Writing the new processing file to the directory
-    write_yaml_file(processdict, os.path.join(outdir, 'process.yml'))
+    download_waveforms_to_storage(
+        datadir, starttime=starttime, endtime=endtime,
+        waveform_storage=waveformdir, station_storage=stationdir,
+        **download_dict)
 
     return None
+
 
     # actual m: amplitude, x0, yo, sigma_x, sigma_y, theta, offset
     mdictsol = dict(

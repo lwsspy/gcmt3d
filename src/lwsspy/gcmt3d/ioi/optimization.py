@@ -12,20 +12,21 @@ from lwsspy.utils.io import read_yaml_file
 
 # These are the function that have to be hard-coded
 # from lwsspy.gcmt3d.ioi.make_data import make_data
-from lwsspy.gcmt3d.ioi.utils import optimdir, createdir, rmdir
+from lwsspy.gcmt3d.ioi.utils import optimdir, createdir, rmdir, \
+    prepare_inversion_dir, prepare_model, prepare_stations
 from lwsspy.gcmt3d.ioi.get_data import get_data
 from lwsspy.gcmt3d.ioi.gaussian2d import g
-from lwsspy.gcmt3d.ioi.data import \
-    write_data, write_data_processed
-from lwsspy.gcmt3d.ioi.metadata import write_metadata, read_metadata
-from lwsspy.gcmt3d.ioi.model import read_model, write_model
+# from lwsspy.gcmt3d.ioi.data import \
+#     write_data, write_data_processed
+# from lwsspy.gcmt3d.ioi.metadata import write_metadata, read_metadata
+# from lwsspy.gcmt3d.ioi.model import read_model, write_model
 from lwsspy.gcmt3d.ioi.forward import forward
 from lwsspy.gcmt3d.ioi.kernel import frechet
 from lwsspy.gcmt3d.ioi.cost import cost
 from lwsspy.gcmt3d.ioi.gradient import gradient
 from lwsspy.gcmt3d.ioi.hessian import hessian
 from lwsspy.gcmt3d.ioi.descent import descent
-
+from lwsspy.gcmt3d.ioi.processing import process_data
 
 # These are the functions that are basefunction
 from lwsspy.gcmt3d.ioi.log import clear_log
@@ -68,8 +69,8 @@ outdir, _, _, _, _, _, _, _, _, _, _, _, _, _ = \
     optimdir(inputfilename, cmtfilename, get_dirs_only=True)
 
 # %%
-if os.path.exists(outdir):
-    rmdir(outdir)
+# if os.path.exists(outdir):
+#     rmdir(outdir)
 
 # %%
 outdir, modldir, metadir, datadir, simudir, ssyndir, sfredir, syntdir, \
@@ -78,10 +79,21 @@ outdir, modldir, metadir, datadir, simudir, ssyndir, sfredir, syntdir, \
 
 
 # %%
-# Make data and get first model
-get_data(cmtfilename, outdir, datadir, modldir, metadir,
-         outdir, inputfilename)
+# Create local parameter files and copy the model files
+prepare_inversion_dir(cmtfilename, outdir, metadir, inputfilename)
 
+# %%
+# Download the data
+get_data(outdir, datadir, metadir)
+
+# %%
+prepare_model(outdir, metadir, modldir)
+
+# %%
+prepare_stations(metadir)
+
+# %%
+process_data(outdir, metadir, datadir)
 # Nparams = int(read_model(modldir, 0, 0).size)
 
 # %%

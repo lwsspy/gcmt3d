@@ -1,15 +1,70 @@
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import os
 from matplotlib.ticker import MaxNLocator
 from lwsspy.plot.axes_from_axes import axes_from_axes
-
+from lwsspy.seismo.source import CMTSource
+from lwsspy.seismo.plot_seismogram import plot_seismogram_by_station
+from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
+from lwsspy.seismo.inv2net_sta import inv2net_sta
+from .utils import read_pickle
 # def cgh(costdir, gradir, hessdir, it, ls=None):
 #     c = read_cost(costdir, it, ls)
 #     g = read_gradient(graddir, it, ls)
 #     H = read_hessian(hessdir, it, ls)
 
 #     return c, g, H
+
+
+def plot_stream_pdf(outdir, outfile, wavetype='mantle'):
+
+    # CMT source
+    cmtsource = CMTSource.from_CMTSOLUTION_file(
+        os.path.join(outdir, 'meta', 'init_model.cmt')
+    )
+
+    # Read data
+    data = read_pickle(os.path.join(
+        outdir, 'data', f'{wavetype}_processed.pkl'))
+
+    # Get stations
+    inv = read_inventory(os.path.join(outdir, 'meta', 'stations.xml'))
+
+    # Get stations and networks
+    networks, stations = inv2net_sta(inv)
+
+    # Sort if possible
+
+    if 'distance' in data[0].stats:
+
+        distances = []
+        for _network, _station in zip(networks, stations):
+            try:
+                datatr = data.select(network=_network, station=_station)[0]
+                distances.append(datatr.stats['distance'])
+
+            except Exception as e:
+                print(_network, _station, e)
+                distances.append(180.0)
+
+        idx = np.argsort(distances)
+        networks = np.array(networks)[idx].tolist()
+        stations = np.array(stations)[idx].tolist()
+
+    with PdfPages(outfile) as pdf:
+        for _network, _station in zip(networks, stations):
+            try:
+                # Checking whether there is at least 1 trace in the stream for
+                # the station
+                datatr = data.select(network=_network, station=_station)[0]
+                plot_seismogram_by_station(
+                    _network, _station, data, cmtsource=cmtsource)
+
+                pdf.savefig()  # saves the current figure into a pdf page
+                plt.close(plt.gcf())
+            except Exception as e:
+                print(_network, _station, e)
 
 
 def plot_cost(optdir):

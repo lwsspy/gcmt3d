@@ -11,6 +11,12 @@ class Constants:
     processdict = read_yaml_file(os.path.join(scriptdir, "process.yml"))
     inputfilename = os.path.join(os.path.join(scriptdir, "input.yml"))
 
+    # Download dictionary
+    download_dict = dict(
+        network=",".join(['CU', 'G', 'GE', 'IC', 'II', 'IU', 'MN']),
+        channel_priorities=["LH*", "BH*"],
+    )
+
     # Parameter lists:
     # ----------------
     # This parameters we know the frechet derivative computation of
