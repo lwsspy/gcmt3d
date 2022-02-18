@@ -1,10 +1,7 @@
 # %%
 
+from curses import meta
 import os
-import shutil
-import numpy as np
-
-from copy import copy, deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 from lwsspy.seismo.source import CMTSource
@@ -13,16 +10,18 @@ from lwsspy.utils.io import read_yaml_file
 # These are the function that have to be hard-coded
 # from lwsspy.gcmt3d.ioi.make_data import make_data
 from lwsspy.gcmt3d.ioi.utils import optimdir, createdir, rmdir, \
-    prepare_inversion_dir, prepare_model, prepare_stations
+    prepare_inversion_dir, prepare_model, prepare_stations, \
+    prepare_simulation_dirs
 from lwsspy.gcmt3d.ioi.get_data import get_data
 from lwsspy.gcmt3d.ioi.gaussian2d import g
 # from lwsspy.gcmt3d.ioi.data import \
 #     write_data, write_data_processed
 # from lwsspy.gcmt3d.ioi.metadata import write_metadata, read_metadata
 # from lwsspy.gcmt3d.ioi.model import read_model, write_model
-from lwsspy.gcmt3d.ioi.forward import forward
+from lwsspy.gcmt3d.ioi.forward import forward, update_cmt_synt
 from lwsspy.gcmt3d.ioi.kernel import frechet
 from lwsspy.gcmt3d.ioi.cost import cost
+from lwsspy.gcmt3d.ioi.model import get_simpars, read_model_names, read_perturbation
 from lwsspy.gcmt3d.ioi.gradient import gradient
 from lwsspy.gcmt3d.ioi.hessian import hessian
 from lwsspy.gcmt3d.ioi.descent import descent
@@ -45,19 +44,19 @@ from lwsspy.gcmt3d.ioi.plot import plot_cost, plot_model, plot_hessians
 # %%
 
 # Inversion parameters
-damping = 0.01
-stopping_criterion = 1e-5
-stopping_criterion_model = 0.001
-stopping_criterion_cost_change = 1e-3
-niter_max = 10
-nls_max = 10
-alpha = 1.0
-perc = 0.1
+# damping = 0.01
+# stopping_criterion = 1e-5
+# stopping_criterion_model = 0.001
+# stopping_criterion_cost_change = 1e-3
+# niter_max = 10
+# nls_max = 10
+# alpha = 1.0
+# perc = 0.1
 it0 = 0
 
 
 # %%
-__file__ = '/Users/lucassawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/optimization.py'
+__file__ = '/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/optimization.py'
 cmtfilename = os.path.join(os.path.dirname(__file__), 'C122604A')
 inputfilename = os.path.join(os.path.dirname(__file__), 'input.yml')
 paramfilename = os.path.join(os.path.dirname(__file__), 'process.yml')
@@ -73,9 +72,13 @@ outdir, _, _, _, _, _, _, _, _, _, _, _, _, _ = \
 #     rmdir(outdir)
 
 # %%
+
+
 outdir, modldir, metadir, datadir, simudir, ssyndir, sfredir, syntdir, \
     frecdir, costdir, graddir, hessdir, descdir, optdir = \
     optimdir(inputfilename, cmtfilename)
+
+prepare_inversion_dir(cmtfilename, outdir, metadir, inputfilename)
 
 
 # %%
@@ -84,7 +87,7 @@ prepare_inversion_dir(cmtfilename, outdir, metadir, inputfilename)
 
 # %%
 # Download the data
-get_data(outdir, datadir, metadir)
+get_data(outdir)
 
 # %%
 prepare_model(outdir, metadir, modldir)
@@ -95,6 +98,39 @@ prepare_stations(metadir)
 # %%
 process_data(outdir, metadir, datadir)
 # Nparams = int(read_model(modldir, 0, 0).size)
+
+# %%
+# Preparing the simulation directory
+prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simudir)
+
+# %%
+
+# Write sources to the simulation directories
+update_cmt_synt(modldir, metadir, ssyndir, it0, 0)
+
+
+# %%
+
+
+def printsimInfo(metadir):
+    model_names = read_model_names(metadir)
+    simpars = get_simpars(metadir)
+
+    # Print model parameter info
+    print("Model parameter names:")
+    print("----------------------")
+    for _i, _mname in enumerate(model_names):
+        print(f"{_i:>5d}: {_mname}")
+
+    # Print simulation info
+    print("\nParameters to be simulated: ")
+    print("----------------------")
+    for _i, _mname in enumerate(model_names):
+        if _i in simpars:
+            print(f"{_i:>5d}: {_mname}")
+
+
+printsimInfo(metadir)
 
 # %%
 for it in range(it0, niter_max):

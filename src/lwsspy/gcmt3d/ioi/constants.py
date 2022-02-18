@@ -22,6 +22,7 @@ class Constants:
         "bin": "link",
         "DATA": {
             "Par_file": "file",
+            "STATIONS": "file",
         },
         "DATABASES_MPI": "link",
         "OUTPUT_FILES": {

@@ -1,5 +1,5 @@
 # Inputs. Put full path for safety (~ often isn't recognized by Python)
-database: /Users/lucassawade/testdatabase
+database: /scratch/gpfs/lsawade/testdatabase
 
 # Specfem Directory
 specfem: /scratch/gpfs/lsawade/SpecfemMagic/specfem3d_globe
@@ -8,7 +8,7 @@ specfem: /scratch/gpfs/lsawade/SpecfemMagic/specfem3d_globe
 processparams: null
 
 # For launching specfem 
-launch_method:s srun -n6 --gpus-per-task=1 --ntasks-per-core=1
+launch_method: srun -n6 --gpus-per-task=1
 
 # Multiprocesses: Number of cores to use for the processing
 multiprocesses: 6

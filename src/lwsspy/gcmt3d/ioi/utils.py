@@ -3,7 +3,8 @@ import shutil
 import numpy as np
 import _pickle as pickle
 from .constants import Constants
-from .model import read_model_names, write_model, write_model_names, write_scaling
+from .model import read_model_names, write_model, write_model_names, \
+    write_scaling, write_perturbation
 from lwsspy.seismo.specfem.read_parfile import read_parfile
 from lwsspy.seismo.specfem.write_parfile import write_parfile
 from lwsspy.seismo.source import CMTSource
@@ -263,6 +264,12 @@ def prepare_model(outdir, metadir, modldir):
     # Write scaling vector
     write_scaling(scaling_vector, metadir)
 
+    # Get perturbation
+    perturb_vector = np.array([val['pert'] for _, val in parameters.items()])
+
+    # Write scaling vector
+    write_perturbation(perturb_vector, metadir)
+
 
 def prepare_stations(metadir):
 
@@ -311,7 +318,7 @@ def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
                          specfem_dict=Constants.specfem_dict)
 
     # Write stations file for the synthetic directory
-    shutil.copyfile(stations_src, os.path.join(ssyndir, "DATA", "STATIONS"))
+    # shutil.copyfile(stations_src, os.path.join(ssyndir, "DATA", "STATIONS"))
 
     # Update Par_file depending on the parameter.
     syn_parfile = os.path.join(ssyndir, "DATA", "Par_file")
@@ -334,8 +341,8 @@ def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
 
             # Write stations file
             # Write stations file for the synthetic directory
-            shutil.copyfile(stations_src, os.path.join(
-                pardir, "DATA", "STATIONS"))
+            # shutil.copyfile(stations_src, os.path.join(
+            #     pardir, "DATA", "STATIONS"))
 
             # Update Par_file depending on the parameter.
             dsdm_parfile = os.path.join(pardir, "DATA", "Par_file")
