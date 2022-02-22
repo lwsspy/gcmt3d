@@ -47,13 +47,13 @@ def update_cmt_synt(modldir, metadir, ssyndir, it, ls):
         os.path.join(ssyndir, 'DATA', 'CMTSOLUTION'))
 
 
-def forward(outdir, ssyndir, it, ls=None):
+# def forward(outdir, ssyndir, it, ls=None):
 
-    # Read input file
-    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+#     # Read input file
+#     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
-    # Launchmethod
-    flag = "-t00:05:00"
-    launch_method = inputparams['launch_method'] + " {flag}"
+#     # Launchmethod
+#     flag = "-t00:05:00"
+#     launch_method = inputparams['launch_method'] + " {flag}"
 
     #

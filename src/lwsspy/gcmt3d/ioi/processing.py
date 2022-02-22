@@ -10,6 +10,7 @@ from lwsspy.seismo.process.queue_multiprocess_stream import queue_multiprocess_s
 from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
 
 from .utils import write_pickle
+from .model import read_model, read_model_names, read_perturbation
 
 
 def process_data(outdir):
@@ -144,9 +145,14 @@ def process_synt(outdir, it, ls):
                 f'{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
 
 
-def process_dsdm(outdir, Nmodel, it, ls):
+def wprocess_synt(args):
+    process_synt(*args)
+
+
+def process_dsdm(outdir, nm, it, ls):
 
     # Define directory
+    modldir = os.path.join(outdir, 'modl')
     metadir = os.path.join(outdir, 'meta')
     simudir = os.path.join(outdir, 'simu')
     syntdir = os.path.join(outdir, 'synt')
@@ -155,6 +161,10 @@ def process_dsdm(outdir, Nmodel, it, ls):
     cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
         metadir, 'init_model.cmt'
     ))
+
+    # Read metadata and model
+    m = read_model(modldir, it, ls)
+    model_names = read_model_names(metadir)
 
     # Get processing parameters
     processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))
@@ -211,6 +221,11 @@ def process_dsdm(outdir, Nmodel, it, ls):
             os.path.join(
                 syntdir,
                 f'{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
+
+
+def wprocess_dsdm(args):
+
+    process_dsdm(*args)
 
 
 def bin():

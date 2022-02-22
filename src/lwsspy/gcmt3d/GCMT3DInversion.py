@@ -190,7 +190,7 @@ class GCMT3DInversion:
         launch_method : str, optional
             how to launch the simulations, by default "srun -n6 --gpus-per-task=1"
         process_func : Callable, optional
-            processing function. Only used if multiprocesses is 1, 
+            processing function. Only used if multiprocesses is 1,
             by default lseis.process_stream
         window_func : Callable, optional
             windowing function. Only used if multiprocesses is 1, by default lseis.window_on_stream
