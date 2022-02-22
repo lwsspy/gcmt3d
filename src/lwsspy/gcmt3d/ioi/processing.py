@@ -8,7 +8,9 @@ from lwsspy.seismo.source import CMTSource
 from lwsspy.seismo.process.process import process_stream
 from lwsspy.seismo.process.queue_multiprocess_stream import queue_multiprocess_stream
 from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
+from lwsspy.seismo.stream_multiply import stream_multiply
 
+from .constants import Constants
 from .utils import write_pickle
 from .model import read_model, read_model_names, read_perturbation
 
@@ -155,16 +157,18 @@ def process_dsdm(outdir, nm, it, ls):
     modldir = os.path.join(outdir, 'modl')
     metadir = os.path.join(outdir, 'meta')
     simudir = os.path.join(outdir, 'simu')
-    syntdir = os.path.join(outdir, 'synt')
+    sfredir = os.path.join(simudir, 'dsdm')
+    ssyndir = os.path.join(simudir, 'synt')
 
     # Get CMT
     cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
         metadir, 'init_model.cmt'
     ))
 
-    # Read metadata and model
-    m = read_model(modldir, it, ls)
-    model_names = read_model_names(metadir)
+    # Read model and model name
+    model = read_model(modldir, it, ls)[nm]
+    mname = read_model_names(metadir)[nm]
+    perturbation = read_perturbation(metadir)[nm]
 
     # Get processing parameters
     processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))
@@ -176,7 +180,11 @@ def process_dsdm(outdir, nm, it, ls):
     multiprocesses = inputparams['multiprocesses']
 
     # Read data
-    synt = read(os.path.join(simudir, 'synt', 'OUTPUT_FILES', '*.sac'))
+    if mname in Constants.nosimpars:
+        synt = read(os.path.join(ssyndir, 'OUTPUT_FILES', '*.sac'))
+    else:
+        synt = read(os.path.join(simudir, 'dsdm',
+                    f'dsdm{nm:05d}', 'OUTPUT_FILES', '*.sac'))
 
     # Read metadata
     stations = read_inventory(os.path.join(metadir, 'stations.xml'))
@@ -216,15 +224,26 @@ def process_dsdm(outdir, nm, it, ls):
             pdata = queue_multiprocess_stream(
                 sdata, processdict, nproc=multiprocesses)
 
+        if perturbation is not None:
+            stream_multiply(pdata, 1.0/perturbation)
+
+        # Compute frechet derivative with respect to time
+        if mname == "time_shift":
+            pdata.differentiate(method='gradient')
+            stream_multiply(pdata, -1.0)
+        # If Frechet derivative with respect to depth in m -> divide by 1000
+        # since specfem outputs the derivate with respect to depth in km
+        elif mname == "depth_in_m":
+            stream_multiply(pdata, 1.0/1000.0)
+
         # Write synthetics
         write_pickle(
             os.path.join(
-                syntdir,
-                f'{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
+                sfredir,
+                f'dsdm{nm:05d}{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
 
 
 def wprocess_dsdm(args):
-
     process_dsdm(*args)
 
 
