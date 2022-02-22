@@ -12,7 +12,10 @@ from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
 from .utils import write_pickle
 
 
-def process_data(outdir, metadir, datadir):
+def process_data(outdir):
+
+    metadir = os.path.join(outdir, 'meta')
+    datadir = os.path.join(outdir, 'data')
 
     # Get CMT
     cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
@@ -70,6 +73,144 @@ def process_data(outdir, metadir, datadir):
                 sdata, processdict, nproc=multiprocesses)
 
         write_pickle(os.path.join(datadir, f'{_wtype}_processed.pkl'), pdata)
+
+
+def process_synt(outdir, it, ls):
+
+    # Define directory
+    metadir = os.path.join(outdir, 'meta')
+    simudir = os.path.join(outdir, 'simu')
+    syntdir = os.path.join(outdir, 'synt')
+
+    # Get CMT
+    cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
+        metadir, 'init_model.cmt'
+    ))
+
+    # Get processing parameters
+    processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))
+
+    # Get parameters
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # Read number of processes from input params
+    multiprocesses = inputparams['multiprocesses']
+
+    # Read data
+    synt = read(os.path.join(simudir, 'synt', 'OUTPUT_FILES', '*.sac'))
+
+    # Read metadata
+    stations = read_inventory(os.path.join(metadir, 'stations.xml'))
+
+    # Process each wavetype.
+    for _wtype in processdict.keys():
+
+        sdata = deepcopy(synt)
+
+        # Call processing function and processing dictionary
+        starttime = cmtsource.cmt_time \
+            + processdict[_wtype]["process"]["relative_starttime"]
+        endtime = cmtsource.cmt_time \
+            + processdict[_wtype]["process"]["relative_endtime"]
+
+        # Process dict
+        processdict = deepcopy(processdict[_wtype]["process"])
+
+        processdict.pop("relative_starttime")
+        processdict.pop("relative_endtime")
+        processdict["starttime"] = starttime
+        processdict["endtime"] = endtime
+        processdict["inventory"] = stations
+        processdict.update(dict(
+            remove_response_flag=True,
+            event_latitude=cmtsource.latitude,
+            event_longitude=cmtsource.longitude,
+            geodata=True)
+        )
+
+        # Choosing whether to process in
+        # Multiprocessing does not work in ipython hence we check first
+        # we are in an ipython environment
+        if multiprocesses <= 1 or isipython():
+            pdata = process_stream(sdata, **processdict)
+        else:
+            pdata = queue_multiprocess_stream(
+                sdata, processdict, nproc=multiprocesses)
+
+        # Write synthetics
+        write_pickle(
+            os.path.join(
+                syntdir,
+                f'{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
+
+
+def process_dsdm(outdir, Nmodel, it, ls):
+
+    # Define directory
+    metadir = os.path.join(outdir, 'meta')
+    simudir = os.path.join(outdir, 'simu')
+    syntdir = os.path.join(outdir, 'synt')
+
+    # Get CMT
+    cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
+        metadir, 'init_model.cmt'
+    ))
+
+    # Get processing parameters
+    processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))
+
+    # Get parameters
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # Read number of processes from input params
+    multiprocesses = inputparams['multiprocesses']
+
+    # Read data
+    synt = read(os.path.join(simudir, 'synt', 'OUTPUT_FILES', '*.sac'))
+
+    # Read metadata
+    stations = read_inventory(os.path.join(metadir, 'stations.xml'))
+
+    # Process each wavetype.
+    for _wtype in processdict.keys():
+
+        sdata = deepcopy(synt)
+
+        # Call processing function and processing dictionary
+        starttime = cmtsource.cmt_time \
+            + processdict[_wtype]["process"]["relative_starttime"]
+        endtime = cmtsource.cmt_time \
+            + processdict[_wtype]["process"]["relative_endtime"]
+
+        # Process dict
+        processdict = deepcopy(processdict[_wtype]["process"])
+
+        processdict.pop("relative_starttime")
+        processdict.pop("relative_endtime")
+        processdict["starttime"] = starttime
+        processdict["endtime"] = endtime
+        processdict["inventory"] = stations
+        processdict.update(dict(
+            remove_response_flag=True,
+            event_latitude=cmtsource.latitude,
+            event_longitude=cmtsource.longitude,
+            geodata=True)
+        )
+
+        # Choosing whether to process in
+        # Multiprocessing does not work in ipython hence we check first
+        # we are in an ipython environment
+        if multiprocesses <= 1 or isipython():
+            pdata = process_stream(sdata, **processdict)
+        else:
+            pdata = queue_multiprocess_stream(
+                sdata, processdict, nproc=multiprocesses)
+
+        # Write synthetics
+        write_pickle(
+            os.path.join(
+                syntdir,
+                f'{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
 
 
 def bin():

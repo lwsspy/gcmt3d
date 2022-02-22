@@ -3,6 +3,7 @@ import numpy as np
 from .model import read_model
 from .gradient import read_gradient
 from .hessian import read_hessian
+from lwsspy.utils.io import read_yaml_file
 
 
 def write_descent(dm, descdir, it, ls=None):
@@ -23,7 +24,17 @@ def read_descent(descdir, it, ls=None):
     return np.load(file)
 
 
-def descent(modldir, graddir, hessdir, descdir, outdir, damping, it, ls=None):
+def descent(outdir, damping, it, ls=None):
+
+    # Define the directories
+    metadir = os.path.join(outdir, 'meta')
+    modldir = os.path.join(outdir, 'modl')
+    graddir = os.path.join(outdir, 'grad')
+    hessdir = os.path.join(outdir, 'hess')
+    descdir = os.path.join(outdir, 'desc')
+
+    # Get damping value
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
     # Read model, gradient, hessian
     m = read_model(modldir, it, ls)
@@ -31,7 +42,7 @@ def descent(modldir, graddir, hessdir, descdir, outdir, damping, it, ls=None):
     H = read_hessian(hessdir, it, ls)
 
     # Read scaling
-    s = np.load(os.path.join(outdir, 'scaling.npy'))
+    s = np.load(os.path.join(metadir, 'scaling.npy'))
 
     # Scaling of the cost function
     g *= s

@@ -96,7 +96,7 @@ prepare_model(outdir, metadir, modldir)
 prepare_stations(metadir)
 
 # %%
-process_data(outdir, metadir, datadir)
+process_data(outdir)
 # Nparams = int(read_model(modldir, 0, 0).size)
 
 # %%
