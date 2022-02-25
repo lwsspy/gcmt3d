@@ -1,18 +1,25 @@
 # from lwsspy.utils.reset_cpu_affinity import reset_cpu_affinity
 import os
 from copy import deepcopy
-from obspy import read
+from lwsspy.gcmt3d.ioi.kernel import write_dsdm
+from obspy import read, read_events, Stream
 from lwsspy.utils.isipython import isipython
 from lwsspy.utils.io import read_yaml_file
 from lwsspy.seismo.source import CMTSource
 from lwsspy.seismo.process.process import process_stream
 from lwsspy.seismo.process.queue_multiprocess_stream import queue_multiprocess_stream
+from lwsspy.seismo.window.add_tapers import add_tapers
+from lwsspy.seismo.window.window import window_on_stream, merge_trace_windows
+from lwsspy.seismo.window.queue_multiwindow_stream import queue_multiwindow_stream
 from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
 from lwsspy.seismo.stream_multiply import stream_multiply
 
 from .constants import Constants
 from .utils import write_pickle
 from .model import read_model, read_model_names, read_perturbation
+from .kernel import write_dsdm
+from .forward import write_synt, read_synt
+from .data import write_data, read_data, write_data_windowed, read_data_windowed
 
 
 def process_data(outdir):
@@ -75,7 +82,9 @@ def process_data(outdir):
             pdata = queue_multiprocess_stream(
                 sdata, processdict, nproc=multiprocesses)
 
-        write_pickle(os.path.join(datadir, f'{_wtype}_processed.pkl'), pdata)
+        print(f"writing data {_wtype} for {outdir}")
+
+        write_data(pdata, outdir, _wtype)
 
 
 def process_synt(outdir, it, ls):
@@ -125,10 +134,10 @@ def process_synt(outdir, it, ls):
         processdict["endtime"] = endtime
         processdict["inventory"] = stations
         processdict.update(dict(
-            remove_response_flag=True,
+            remove_response_flag=False,
             event_latitude=cmtsource.latitude,
             event_longitude=cmtsource.longitude,
-            geodata=True)
+            geodata=False)
         )
 
         # Choosing whether to process in
@@ -141,10 +150,7 @@ def process_synt(outdir, it, ls):
                 sdata, processdict, nproc=multiprocesses)
 
         # Write synthetics
-        write_pickle(
-            os.path.join(
-                syntdir,
-                f'{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
+        write_synt(pdata, outdir, _wtype, it, ls)
 
 
 def wprocess_synt(args):
@@ -157,7 +163,7 @@ def process_dsdm(outdir, nm, it, ls):
     modldir = os.path.join(outdir, 'modl')
     metadir = os.path.join(outdir, 'meta')
     simudir = os.path.join(outdir, 'simu')
-    sfredir = os.path.join(simudir, 'dsdm')
+    sdsmdir = os.path.join(simudir, 'dsdm')
     ssyndir = os.path.join(simudir, 'synt')
 
     # Get CMT
@@ -166,9 +172,9 @@ def process_dsdm(outdir, nm, it, ls):
     ))
 
     # Read model and model name
-    model = read_model(modldir, it, ls)[nm]
-    mname = read_model_names(metadir)[nm]
-    perturbation = read_perturbation(metadir)[nm]
+    model = read_model(outdir, it, ls)[nm]
+    mname = read_model_names(outdir)[nm]
+    perturbation = read_perturbation(outdir)[nm]
 
     # Get processing parameters
     processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))
@@ -183,8 +189,8 @@ def process_dsdm(outdir, nm, it, ls):
     if mname in Constants.nosimpars:
         synt = read(os.path.join(ssyndir, 'OUTPUT_FILES', '*.sac'))
     else:
-        synt = read(os.path.join(simudir, 'dsdm',
-                    f'dsdm{nm:05d}', 'OUTPUT_FILES', '*.sac'))
+        synt = read(
+            os.path.join(sdsmdir, f'dsdm{nm:05d}', 'OUTPUT_FILES', '*.sac'))
 
     # Read metadata
     stations = read_inventory(os.path.join(metadir, 'stations.xml'))
@@ -209,10 +215,10 @@ def process_dsdm(outdir, nm, it, ls):
         processdict["endtime"] = endtime
         processdict["inventory"] = stations
         processdict.update(dict(
-            remove_response_flag=True,
+            remove_response_flag=False,
             event_latitude=cmtsource.latitude,
             event_longitude=cmtsource.longitude,
-            geodata=True)
+            geodata=False)
         )
 
         # Choosing whether to process in
@@ -237,14 +243,106 @@ def process_dsdm(outdir, nm, it, ls):
             stream_multiply(pdata, 1.0/1000.0)
 
         # Write synthetics
-        write_pickle(
-            os.path.join(
-                sfredir,
-                f'dsdm{nm:05d}{_wtype}_processed_it{it:05d}_ls{ls:05d}.pkl'), pdata)
+        write_dsdm(pdata, outdir, _wtype, nm, it, ls)
 
 
 def wprocess_dsdm(args):
     process_dsdm(*args)
+
+
+def merge_windows(data_stream: Stream, synt_stream: Stream):
+    """
+    After windowing, the windows are often directly adjacent. In such
+    cases, we can simply unite the windows. The `merge_windows` method
+    calls the appropriate functions to handle that.
+    """
+
+    for obs_tr in data_stream:
+        try:
+            synt_tr = synt_stream.select(
+                station=obs_tr.stats.station,
+                network=obs_tr.stats.network,
+                component=obs_tr.stats.component)[0]
+        except Exception as e:
+            print(
+                "Couldn't find corresponding synt for "
+                "obsd trace({obs_tr.id}): {e}")
+            continue
+
+        if len(obs_tr.stats.windows) > 1:
+            obs_tr.stats.windows = merge_trace_windows(
+                obs_tr, synt_tr)
+
+
+def window(outdir):
+
+    # Get dirs
+    metadir = os.path.join(outdir, 'meta')
+    datadir = os.path.join(outdir, 'data')
+    syntdir = os.path.join(outdir, 'synt')
+
+    # Get process parameters
+    processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))
+
+    # Get input parameters
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # Read number of processes from input params
+    multiprocesses = inputparams['multiprocesses']
+
+    # Read stations
+    stations = read_inventory(os.path.join(metadir, 'stations.xml'))
+
+    # Read obspy event
+    xml_event = read_events(os.path.join(metadir, 'init_model.cmt'))
+
+    # Window debug flag
+    window_debug_flag = True
+    taper_debug_flag = True
+
+    # Loop over
+    for _wtype in processdict.keys():
+
+        # Read synthetics and data
+        synt = read_synt(outdir, _wtype, 0, 0)
+        data = read_data(outdir, _wtype)
+
+        for window_dict in processdict[_wtype]["window"]:
+
+            # Wrap window dictionary
+            wrapwindowdict = dict(
+                station=stations,
+                event=xml_event,
+                config_dict=window_dict,
+                _verbose=window_debug_flag
+            )
+
+            # Serial or Multiprocessing
+            if multiprocesses <= 1:
+                window_on_stream(data, synt, **wrapwindowdict)
+            else:
+                data = queue_multiwindow_stream(
+                    data, synt,
+                    wrapwindowdict, nproc=multiprocesses)
+
+        if len(processdict[_wtype]["window"]) > 1:
+            merge_windows(data, synt)
+
+        # After each trace has windows attached continue
+        add_tapers(data, taper_type="tukey",
+                   alpha=0.25, verbose=taper_debug_flag)
+
+        # Some traces aren't even iterated over..
+        for _tr in data:
+            if "windows" not in _tr.stats:
+                _tr.stats.windows = []
+
+        # Write windowed data
+        write_data_windowed(data, outdir, _wtype)
+
+
+def wwindow(args):
+    window(*args)
 
 
 def bin():
@@ -253,7 +351,7 @@ def bin():
 
     outdir, metadir, datadir = argv[1:]
 
-    process_data(outdir, metadir, datadir)
+    process_data(outdir)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,16 @@
 import os
 import numpy as np
-from .data import read_data_processed
+from lwsspy.seismo.costgradhess import CostGradHess
+from lwsspy.utils.io import read_yaml_file
+from .data import read_data_windowed
 from .forward import read_synt
 
 
-def write_cost(c, costdir, it, ls=None):
+def write_cost(c, outdir, it, ls=None):
+
+    # Get directory
+    costdir = os.path.join(outdir, 'cost')
+
     if ls is not None:
         fname = f"cost_it{it:05d}_ls{ls:05d}.npy"
     else:
@@ -13,7 +19,11 @@ def write_cost(c, costdir, it, ls=None):
     np.save(file, c)
 
 
-def read_cost(costdir, it, ls=None):
+def read_cost(outdir, it, ls=None):
+
+    # Get directory
+    costdir = os.path.join(outdir, 'cost')
+
     if ls is not None:
         fname = f"cost_it{it:05d}_ls{ls:05d}.npy"
     else:
@@ -22,15 +32,39 @@ def read_cost(costdir, it, ls=None):
     return np.load(file)
 
 
-def cost(datadir, syntdir, costdir, it, ls=None):
+def cost(outdir, it, ls=None):
 
-    # Compute residual
-    data = read_data_processed(datadir)
-    synt = read_synt(syntdir, it, ls)
-    resi = synt.flatten() - data.flatten()
+    # Get input parameters
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
-    c = 0.5/resi.size * np.sum((resi)**2)
+    # Get processparameters
+    processparams = read_yaml_file(os.path.join(outdir, 'process.yml'))
 
-    write_cost(c, costdir, it, ls)
+    # Weighting?
+    weighting = inputparams['weighting']
 
-    print("      c:", np.array2string(c, max_line_width=int(1e10)))
+    # Normalize?
+    normalize = inputparams['normalize']
+
+    # Compute total cost
+    cost = 0.0
+    for _wtype in processparams.keys():
+
+        data = read_data_windowed(outdir, _wtype)
+        synt = read_synt(outdir, _wtype, it, ls)
+
+        cgh = CostGradHess(
+            data=data,
+            synt=synt,
+            verbose=False,
+            normalize=normalize,
+            weight=weighting)
+
+        if weighting:
+            cost += cgh.cost() * processparams[_wtype]["weight"]
+        else:
+            cost += cgh.cost()
+
+    write_cost(cost, outdir, it, ls)
+
+    print("      c: ", np.array2string(cost, max_line_width=int(1e10)))

@@ -1,45 +1,94 @@
 import os
 import numpy as np
-from .kernel import read_frechet
-from .model import read_model
+from lwsspy.utils.io import read_yaml_file
+from lwsspy.seismo.costgradhess import CostGradHess
+from .data import read_data_windowed
+from .forward import read_synt
+from .kernel import read_dsdm
+from .model import read_model_names
 
 
-def write_hessian(H, hessdir, it, ls=None):
+def write_hessian(h, outdir, it, ls=None):
+
+    # Get graddir
+    hessdir = os.path.join(outdir, 'hess')
+
+    # Get filename
     if ls is not None:
         fname = f"hess_it{it:05d}_ls{ls:05d}.npy"
     else:
         fname = f"hess_it{it:05d}.npy"
+
+    # Full filename
     file = os.path.join(hessdir, fname)
-    np.save(file, H)
+
+    # Save
+    np.save(file, h)
 
 
-def read_hessian(hessdir, it, ls=None):
+def read_hessian(outdir, it, ls=None):
+
+    # Get graddir
+    hessdir = os.path.join(outdir, 'hess')
+
+    # Get filename
     if ls is not None:
         fname = f"hess_it{it:05d}_ls{ls:05d}.npy"
     else:
         fname = f"hess_it{it:05d}.npy"
+
+    # Full filename
     file = os.path.join(hessdir, fname)
+
     return np.load(file)
 
 
-def hessian(modldir, hessdir, frecdir, it, ls=None):
+def hessian(outdir, it, ls=None):
 
-    # Read model
-    m = read_model(modldir, it, ls)
+    # Get dirs
+    metadir = os.path.join(outdir, 'meta')
 
-    # Gradient
-    H = np.zeros((m.size, m.size))
+    # Get input parameters
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
-    # read each Frechet derivative multiple with the residual and
-    for _j in range(m.size):
-        dsi_dmj = read_frechet(_j, frecdir, it, ls).flatten()
+    # Get processparameters
+    processparams = read_yaml_file(os.path.join(outdir, 'process.yml'))
 
-        for _k in range(m.size):
-            dsi_dmk = read_frechet(_k, frecdir, it, ls).flatten()
+    # Weighting?
+    weighting = inputparams['weighting']
 
-            H[_j, _k] = 1/dsi_dmj.size * np.sum(dsi_dmj*dsi_dmk)
+    # Normalize?
+    normalize = inputparams['normalize']
 
-    # Write gradient to disk
-    write_hessian(H, hessdir, it, ls)
+    # Get number of modelparams
+    NM = len(read_model_names(outdir))
 
-    # print("    h: ", H)
+    # Compute total cost
+    hess = np.zeros((NM, NM))
+
+    for _wtype in processparams.keys():
+
+        data = read_data_windowed(outdir, _wtype)
+        synt = read_synt(outdir, _wtype, it, ls)
+
+        # Get all frechet derivatives
+        dsyn = list()
+        for _i in range(NM):
+            dsyn.append(read_dsdm(outdir, _wtype, _i, it, ls))
+
+        # Create CostGradHess object
+        cgh = CostGradHess(
+            data=data,
+            synt=synt,
+            dsyn=dsyn,
+            verbose=False,
+            normalize=normalize,
+            weight=weighting)
+
+        if weighting:
+            hess += cgh.hess() * processparams[_wtype]["weight"]
+        else:
+            hess += cgh.hess()
+
+    # Write Gradients
+    write_hessian(hess, outdir, it, ls)

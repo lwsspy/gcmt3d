@@ -1,8 +1,9 @@
 import os
 
 
-def write_status(statdir, message):
+def write_status(outdir, message):
 
+    statdir = outdir
     fname = "STATUS.txt"
     file = os.path.join(statdir, fname)
 
@@ -10,7 +11,9 @@ def write_status(statdir, message):
         f.write(message)
 
 
-def write_log(logdir, message):
+def write_log(outdir, message):
+
+    logdir = outdir
     fname = "LOG.txt"
     file = os.path.join(logdir, fname)
 
@@ -18,7 +21,10 @@ def write_log(logdir, message):
         f.write(message + "\n")
 
 
-def clear_log(logdir):
+def clear_log(outdir):
+
+    logdir = outdir
+
     fname = "LOG.txt"
     file = os.path.join(logdir, fname)
 

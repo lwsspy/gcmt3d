@@ -11,7 +11,7 @@ processparams: null
 launch_method: srun -n6 --gpus-per-task=1
 
 # Multiprocesses: Number of cores to use for the processing
-multiprocesses: 6
+multiprocesses: 10
 
 # Define whether to download data or not
 download_data: True
@@ -23,6 +23,13 @@ downloadparams: null
 duration: 7200
 starttime_offset: -50.0
 endtime_offset: 50.0
+merge_windows: True
+normalize: True
+weighting: True
+component_weights:
+  R: 1.0
+  T: 1.0
+  Z: 1.0
 
 # Whether to constrain the moment tensor to have a zero trace
 zero_trace: False
@@ -56,10 +63,10 @@ optimization:
   damping: 0.01
 
   # Max iterations
-  niter_max: 5
+  niter_max: 2
 
   # Max linesearches
-  nls_max: 3
+  nls_max: 4
 
   # Stopping criterion relative cost lower than
   stopping_criterion: 1.0e-2

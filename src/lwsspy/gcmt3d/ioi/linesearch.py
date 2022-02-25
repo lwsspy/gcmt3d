@@ -1,15 +1,15 @@
 import os
 import numpy as np
+from lwsspy.utils.io import read_yaml_file
 
 from .log import write_log, write_status
 from .wolfe import wolfe_conditions, update_alpha
-from .import_problem import import_problem
 from .cost import read_cost
 from .descent import read_descent
 from .gradient import read_gradient
 
 
-def write_optvals(optvals, optdir, it, ls=None):
+def write_optvals(optvals, outdir, it, ls=None):
     """writes the optimization parameters to file
 
     Parameters
@@ -23,15 +23,24 @@ def write_optvals(optvals, optdir, it, ls=None):
     ls : int, optional
         iteration number, by default None
     """
+
+    # Get opt dir
+    optdir = os.path.join(outdir, 'opt')
+
+    # Fname
     if ls is not None:
         fname = f"optvals_it{it:05d}_ls{ls:05d}.npy"
     else:
         fname = f"optvals_it{it:05d}.npy"
+
+    # Full filename
     file = os.path.join(optdir, fname)
+
+    # save optimization values
     np.save(file, optvals)
 
 
-def read_optvals(optdir, it, ls=None):
+def read_optvals(outdir, it, ls=None):
     """Reads the optimization values q, alpha, alpha left, and alpha right,
     and the three wolf condition number w1,w2,w3. into a tuple
 
@@ -44,6 +53,9 @@ def read_optvals(optdir, it, ls=None):
     ls : int, optional
         linesearch number, by default None
     """
+
+    # Get opt dir
+    optdir = os.path.join(outdir, 'opt')
 
     if ls is not None:
         fname = f"optvals_it{it:05d}_ls{ls:05d}.npy"
@@ -61,16 +73,20 @@ def read_optvals(optdir, it, ls=None):
     return optvals
 
 
-def check_optvals(optdir, statdir, costdir, it, ls, nls_max):
+def check_optvals(outdir, it, ls):
+
+    # Read inputparams
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+    nls_max = inputparams['optimization']['nls_max']
 
     # Read previous set of optimization values
     _, alpha_l, alpha_r, alpha, w1, w2, w3 = read_optvals(
-        optdir, it, ls)
+        outdir, it, ls)
 
     # Linesearch failed if w3 is False
     if w3 is False:
         write_status(
-            statdir,
+            outdir,
             f"FAIL: NOT A DESCENT DIRECTION at it {it:05d} and ls {ls:05d}.")
 
         return False
@@ -79,18 +95,18 @@ def check_optvals(optdir, statdir, costdir, it, ls, nls_max):
     elif (w1 is True) and (w2 is True):
 
         # Read initial cost and final cost
-        initcost = read_cost(costdir, 0, 0)
-        cost = read_cost(costdir, it, ls)
+        initcost = read_cost(outdir, 0, 0)
+        cost = read_cost(outdir, it, ls)
 
         # Write log message
-        write_log(statdir,
+        write_log(outdir,
                   f"iter = {it}, "
                   f"f/fo={cost/initcost:5.4e}, "
                   f"nls = {ls}, wolfe1 = {w1} wolfe2 = {w2}, "
                   f"a={alpha}, al={alpha_l}, ar={alpha_r}")
 
         write_status(
-            statdir,
+            outdir,
             f"SUCCESS: it {it:05d} and ls {ls:05d}.")
 
         return False
@@ -98,7 +114,7 @@ def check_optvals(optdir, statdir, costdir, it, ls, nls_max):
     # Check linesearch
     elif ls == (nls_max-1) and ((w1 is False) or (w2 is False)):
         write_status(
-            statdir,
+            outdir,
             f"FAIL: LS ENDED at it {it:05d} and ls {ls:05d}.")
 
         return False
@@ -106,11 +122,11 @@ def check_optvals(optdir, statdir, costdir, it, ls, nls_max):
     return True
 
 
-def linesearch(optdir, descdir, graddir, costdir, it, ls):
+def linesearch(outdir, it, ls):
 
     # Get the model update and grad
-    dm = read_descent(descdir, it, ls)
-    g = read_gradient(graddir, it, ls)
+    dm = read_descent(outdir, it, ls)
+    g = read_gradient(outdir, it, ls)
 
     # Compute q descent dot grad
     q = np.sum(dm*g)
@@ -128,13 +144,13 @@ def linesearch(optdir, descdir, graddir, costdir, it, ls):
 
         # Read previous set of optimization values
         q_old, alpha_l, alpha_r, alpha, _, _, _ = read_optvals(
-            optdir, it, ls-1)
+            outdir, it, ls-1)
 
         # Read current q and new queue
-        cost = read_cost(costdir, it, ls)
+        cost = read_cost(outdir, it, ls)
 
         # Read current q and new queue
-        cost_old = read_cost(costdir, it, ls-1)
+        cost_old = read_cost(outdir, it, ls-1)
 
         # Safeguard check for inf and nans...
         if np.isnan(cost) or np.isinf(cost):
@@ -143,9 +159,6 @@ def linesearch(optdir, descdir, graddir, costdir, it, ls):
             alpha = (alpha_l + alpha_r)*0.5
             w1, w2, w3 = False, False, True
 
-            write_optvals(
-                [q, alpha_l, alpha_r, alpha, w1, w2, w3], optdir, it, ls)
-
         else:
 
             # Compute wolfe conditions
@@ -153,16 +166,11 @@ def linesearch(optdir, descdir, graddir, costdir, it, ls):
                 q_old, q, cost_old, cost, alpha)
 
             if w3 is False or ((w1 is True) and (w2 is True)):
-                # Write to optimization values to file
-                write_optvals(
-                    [q, alpha_l, alpha_r, alpha, w1, w2, w3], optdir, it, ls)
+                pass
             else:
                 # Write to optimization values to file
                 alpha_l, alpha_r, alpha = update_alpha(
                     w1, w2, alpha_l, alpha_r, alpha, factor=10.0)
 
     # Write to optimization values to file
-    write_optvals([q, alpha_l, alpha_r, alpha, w1, w2, w3], optdir, it, ls)
-
-    print("      optvals:",  np.array2string(
-        np.array([q, alpha_l, alpha_r, alpha, w1, w2, w3]), max_line_width=int(1e10)))
+    write_optvals([q, alpha_l, alpha_r, alpha, w1, w2, w3], outdir, it, ls)

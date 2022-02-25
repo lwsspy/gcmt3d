@@ -2,6 +2,7 @@ import os
 import shutil
 import numpy as np
 import _pickle as pickle
+# from obspy import read_events
 from .constants import Constants
 from .model import read_model_names, write_model, write_model_names, \
     write_scaling, write_perturbation
@@ -89,7 +90,7 @@ def optimdir(inputfile, cmtfilename, get_dirs_only=False):
     ssyndir = os.path.join(simudir, "synt")
     sfredir = os.path.join(simudir, "dsdm")
     syntdir = os.path.join(outdir, "synt")
-    frecdir = os.path.join(outdir, "frec")
+    dsdmdir = os.path.join(outdir, "dsdm")
     costdir = os.path.join(outdir, "cost")
     graddir = os.path.join(outdir, "grad")
     hessdir = os.path.join(outdir, "hess")
@@ -106,7 +107,7 @@ def optimdir(inputfile, cmtfilename, get_dirs_only=False):
         createdir(ssyndir)
         createdir(sfredir)
         createdir(syntdir)
-        createdir(frecdir)
+        createdir(dsdmdir)
         createdir(costdir)
         createdir(graddir)
         createdir(hessdir)
@@ -114,7 +115,7 @@ def optimdir(inputfile, cmtfilename, get_dirs_only=False):
         createdir(optdir)
 
     return outdir, modldir, metadir, datadir, simudir, ssyndir, sfredir, syntdir, \
-        frecdir, costdir, graddir, hessdir, descdir, optdir
+        dsdmdir, costdir, graddir, hessdir, descdir, optdir
 
 
 def adapt_processdict(cmtsource, processdict, duration):
@@ -191,7 +192,7 @@ def adapt_processdict(cmtsource, processdict, duration):
     return processdict
 
 
-def prepare_inversion_dir(cmtfile, outdir, metadir, inputparamfile):
+def prepare_inversion_dir(cmtfile, outdir, inputparamfile):
 
     # Load CMT solution
     cmtsource = CMTSource.from_CMTSOLUTION_file(cmtfile)
@@ -201,9 +202,6 @@ def prepare_inversion_dir(cmtfile, outdir, metadir, inputparamfile):
 
     # Write the input parameters to the inversion directory (for easy inversion)
     write_yaml_file(inputparams, os.path.join(outdir, 'input.yml'))
-
-    # Read parameterfile
-    inputparams = read_yaml_file(inputparamfile)
 
     # start label
     start_label = '_' + \
@@ -226,18 +224,18 @@ def prepare_inversion_dir(cmtfile, outdir, metadir, inputparamfile):
 
     # Writing Original CMTSOLUTION
     cmtsource.write_CMTSOLUTION_file(
-        os.path.join(metadir, cmtsource.eventname + start_label))
+        os.path.join(outdir, 'meta', cmtsource.eventname + start_label))
 
     # Write model with generic name for easy access
     cmtsource.write_CMTSOLUTION_file(
-        os.path.join(metadir, 'init_model.cmt'))
+        os.path.join(outdir, 'meta', 'init_model.cmt'))
 
 
-def prepare_model(outdir, metadir, modldir):
+def prepare_model(outdir):
 
     # Get the initial model
     init_cmt = CMTSource.from_CMTSOLUTION_file(
-        os.path.join(metadir, 'init_model.cmt'))
+        os.path.join(outdir, 'meta', 'init_model.cmt'))
 
     # Read parameterfile
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
@@ -249,41 +247,46 @@ def prepare_model(outdir, metadir, modldir):
     model_names = list(parameters.keys())
 
     # Write model names
-    write_model_names(model_names, metadir)
+    write_model_names(model_names, outdir)
 
     # Get model vector
     model_vector = np.array([getattr(init_cmt, key)
                             for key in parameters.keys()])
 
     # Write model vector
-    write_model(model_vector, modldir, 0, 0)
+    write_model(model_vector, outdir, 0, 0)
 
     # Get scaling
     scaling_vector = np.array([val['scale'] for _, val in parameters.items()])
 
     # Write scaling vector
-    write_scaling(scaling_vector, metadir)
+    write_scaling(scaling_vector, outdir)
 
     # Get perturbation
     perturb_vector = np.array([val['pert'] for _, val in parameters.items()])
 
     # Write scaling vector
-    write_perturbation(perturb_vector, metadir)
+    write_perturbation(perturb_vector, outdir)
 
 
-def prepare_stations(metadir):
+def prepare_stations(outdir):
 
     # Read inventory from the station directory and put into a single stations.xml
-    inv = read_inventory(os.path.join(metadir, 'stations', '*.xml'))
+    inv = read_inventory(os.path.join(outdir, 'meta', 'stations', '*.xml'))
 
     # Write inventory to a single station directory
-    inv.write(os.path.join(metadir, 'stations.xml'), format='STATIONXML')
+    inv.write(os.path.join(outdir, 'meta', 'stations.xml'), format='STATIONXML')
 
     # Write SPECFEM STATIONS FILE
-    inv2STATIONS(inv, os.path.join(metadir, 'STATIONS.txt'))
+    inv2STATIONS(inv, os.path.join(outdir, 'meta', 'STATIONS.txt'))
 
 
-def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
+def prepare_simulation_dirs(outdir):
+
+    # Get relevant dirs
+    simudir = os.path.join(outdir, 'simu')
+    ssyndir = os.path.join(simudir, 'synt')
+    sfredir = os.path.join(simudir, 'dsdm')
 
     # Get input params
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
@@ -295,18 +298,16 @@ def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
     simulation_duration = np.round(inputparams["duration"]/60 * 1.02)
 
     # Get modelparameter names
-    model_names = read_model_names(metadir)
-
-    # Get specfem
+    model_names = read_model_names(outdir)
 
     # Stations file
-    stations_src = os.path.join(metadir, 'STATIONS.txt')
+    stations_src = os.path.join(outdir, 'meta', 'STATIONS.txt')
 
     # Create synthetic directories
     createsimdir(specfemdir, ssyndir,
                  specfem_dict=Constants.specfem_dict)
 
-    # Create one simulation directory for each inversion
+    # Create one simulation directory for each inversion parameter
     for _i, _mname in enumerate(model_names):
 
         if _mname in Constants.nosimpars:
@@ -318,7 +319,7 @@ def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
                          specfem_dict=Constants.specfem_dict)
 
     # Write stations file for the synthetic directory
-    # shutil.copyfile(stations_src, os.path.join(ssyndir, "DATA", "STATIONS"))
+    shutil.copyfile(stations_src, os.path.join(ssyndir, "DATA", "STATIONS"))
 
     # Update Par_file depending on the parameter.
     syn_parfile = os.path.join(ssyndir, "DATA", "Par_file")
@@ -341,14 +342,17 @@ def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
 
             # Write stations file
             # Write stations file for the synthetic directory
-            # shutil.copyfile(stations_src, os.path.join(
-            #     pardir, "DATA", "STATIONS"))
+            shutil.copyfile(stations_src, os.path.join(
+                pardir, "DATA", "STATIONS"))
 
             # Update Par_file depending on the parameter.
             dsdm_parfile = os.path.join(pardir, "DATA", "Par_file")
             dsdm_pars = read_parfile(dsdm_parfile)
 
-            # Set data parameters and  write new parfiles
+            # Adapt duration
+            dsdm_pars["RECORD_LENGTH_IN_MINUTES"] = simulation_duration
+
+            # Check whether parameter is a source location derivative
             if _mname in Constants.locations:
                 dsdm_pars["USE_SOURCE_DERIVATIVE"] = True
                 dsdm_pars["USE_SOURCE_DERIVATIVE_DIRECTION"] = \
@@ -356,8 +360,5 @@ def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
             else:
                 dsdm_pars["USE_SOURCE_DERIVATIVE"] = False
 
-                # Adapt duration
-                dsdm_pars["RECORD_LENGTH_IN_MINUTES"] = simulation_duration
-
-                # Write Stuff to Par_file
-                write_parfile(dsdm_pars, dsdm_parfile)
+            # Write Stuff to Par_file
+            write_parfile(dsdm_pars, dsdm_parfile)

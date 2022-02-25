@@ -6,40 +6,54 @@ from .hessian import read_hessian
 from lwsspy.utils.io import read_yaml_file
 
 
-def write_descent(dm, descdir, it, ls=None):
+def write_descent(dm, outdir, it, ls=None):
+
+    # Get graddir
+    descdir = os.path.join(outdir, 'desc')
+
+    # Get filename
     if ls is not None:
-        fname = f"desc_it{it:05d}_ls{ls:05d}.npy"
+        fname = f"dm_it{it:05d}_ls{ls:05d}.npy"
     else:
-        fname = f"desc_it{it:05d}.npy"
+        fname = f"dm_it{it:05d}.npy"
+
+    # Full filename
     file = os.path.join(descdir, fname)
+
+    # Save
     np.save(file, dm)
 
 
-def read_descent(descdir, it, ls=None):
+def read_descent(outdir, it, ls=None):
+
+    # Get graddir
+    descdir = os.path.join(outdir, 'desc')
+
     if ls is not None:
-        fname = f"desc_it{it:05d}_ls{ls:05d}.npy"
+        fname = f"dm_it{it:05d}_ls{ls:05d}.npy"
     else:
-        fname = f"desc_it{it:05d}.npy"
+        fname = f"dm_it{it:05d}.npy"
+
     file = os.path.join(descdir, fname)
+
     return np.load(file)
 
 
-def descent(outdir, damping, it, ls=None):
+def descent(outdir, it, ls=None):
 
     # Define the directories
     metadir = os.path.join(outdir, 'meta')
-    modldir = os.path.join(outdir, 'modl')
-    graddir = os.path.join(outdir, 'grad')
-    hessdir = os.path.join(outdir, 'hess')
-    descdir = os.path.join(outdir, 'desc')
 
     # Get damping value
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
+    # Get damping value
+    damping = inputparams['optimization']['damping']
+
     # Read model, gradient, hessian
-    m = read_model(modldir, it, ls)
-    g = read_gradient(graddir, it, ls)
-    H = read_hessian(hessdir, it, ls)
+    m = read_model(outdir, it, ls)
+    g = read_gradient(outdir, it, ls)
+    H = read_hessian(outdir, it, ls)
 
     # Read scaling
     s = np.load(os.path.join(metadir, 'scaling.npy'))
@@ -53,6 +67,6 @@ def descent(outdir, damping, it, ls=None):
                          m.size * np.diag(np.ones(m.size)), -g)
 
     # Write direction to file
-    write_descent(dm*s, descdir, it, ls)
+    write_descent(dm*s, outdir, it, ls)
 
     print("      d: ", np.array2string(dm, max_line_width=int(1e10)))

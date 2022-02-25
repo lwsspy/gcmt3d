@@ -2,42 +2,63 @@ import imp
 import os
 from copy import deepcopy
 import numpy as np
-from .constants import Constants
-from .model import read_model, read_model_names, read_perturbation
-from .metadata import read_metadata
+from obspy import Stream
 from lwsspy.seismo.source import CMTSource
 
 
-def write_frechet(frec, param, frecdir, it, ls=None):
-    if ls is not None:
-        fname = f"frec{param:05d}_it{it:05d}_ls{ls:05d}.npy"
-    else:
-        fname = f"frec{param:05d}_it{it:05d}.npy"
-    file = os.path.join(frecdir, fname)
-    np.save(file, frec)
+from .constants import Constants
+from .model import read_model, read_model_names, read_perturbation
+from .metadata import read_metadata
+from .utils import write_pickle, read_pickle
 
 
-def read_frechet(param, frecdir, it, ls=None):
+def write_dsdm(dsdm: Stream, outdir, wavetype, nm, it, ls=None):
+
+    # Get the synthetics directory
+    dsdmdir = os.path.join(outdir, 'dsdm')
+
+    # Get filename
     if ls is not None:
-        fname = f"frec{param:05d}_it{it:05d}_ls{ls:05d}.npy"
+        fname = f'dsdm{nm:05d}_{wavetype}_it{it:05d}_ls{ls:05d}.pkl'
     else:
-        fname = f"frec{param:05d}_it{it:05d}.npy"
-    file = os.path.join(frecdir, fname)
-    return np.load(file)
+        fname = f'dsdm{nm:05d}_{wavetype}_it{it:05d}.pkl'
+
+    # Get output file name
+    file = os.path.join(dsdmdir, fname)
+
+    # Write output
+    write_pickle(file, dsdm)
+
+
+def read_dsdm(outdir, wavetype, nm, it, ls=None) -> Stream:
+
+    # Get the synthetics directory
+    dsdmdir = os.path.join(outdir, 'dsdm')
+
+    # Get filename
+    if ls is not None:
+        fname = f'dsdm{nm:05d}_{wavetype}_it{it:05d}_ls{ls:05d}.pkl'
+    else:
+        fname = f'dsdm{nm:05d}_{wavetype}_it{it:05d}.pkl'
+
+    # Get output file name
+    file = os.path.join(dsdmdir, fname)
+
+    return read_pickle(file)
 
 
 def update_cmt_dsdm(outdir, it, ls):
 
     modldir = os.path.join(outdir, 'modl')
     metadir = os.path.join(outdir, 'meta')
-    sfredir = os.path.join(outdir, 'simu', 'frec')
+    sdsmdir = os.path.join(outdir, 'simu', 'dsdm')
 
     # Read metadata and model
-    m = read_model(modldir, it, ls)
-    model_names = read_model_names(metadir)
+    m = read_model(outdir, it, ls)
+    model_names = read_model_names(outdir)
 
     # Read perturbation
-    perturbation = read_perturbation(metadir)
+    perturbation = read_perturbation(outdir)
 
     # Read original CMT solution
     cmt = CMTSource.from_CMTSOLUTION_file(
@@ -53,7 +74,7 @@ def update_cmt_dsdm(outdir, it, ls):
         if _mname not in Constants.nosimpars:
 
             cmtfiledest = os.path.join(
-                sfredir, "dsdm{_i:05d}", "DATA", "CMTSOLUTION")
+                sdsmdir, f"dsdm{_i:05d}", "DATA", "CMTSOLUTION")
 
             # Perturb source at parameter
             cmt_dsdm = deepcopy(cmt)

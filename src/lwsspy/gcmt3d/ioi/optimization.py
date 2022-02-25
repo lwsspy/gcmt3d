@@ -18,8 +18,8 @@ from lwsspy.gcmt3d.ioi.gaussian2d import g
 #     write_data, write_data_processed
 # from lwsspy.gcmt3d.ioi.metadata import write_metadata, read_metadata
 # from lwsspy.gcmt3d.ioi.model import read_model, write_model
-from lwsspy.gcmt3d.ioi.forward import forward, update_cmt_synt
-from lwsspy.gcmt3d.ioi.kernel import frechet
+from lwsspy.gcmt3d.ioi.forward import update_cmt_synt
+from lwsspy.gcmt3d.ioi.kernel import update_cmt_dsdm
 from lwsspy.gcmt3d.ioi.cost import cost
 from lwsspy.gcmt3d.ioi.model import get_simpars, read_model_names, read_perturbation
 from lwsspy.gcmt3d.ioi.gradient import gradient
@@ -113,7 +113,7 @@ update_cmt_synt(modldir, metadir, ssyndir, it0, 0)
 
 
 def printsimInfo(metadir):
-    model_names = read_model_names(metadir)
+    model_names = read_model_names(outdir)
     simpars = get_simpars(metadir)
 
     # Print model parameter info
@@ -157,8 +157,7 @@ for it in range(it0, niter_max):
         hessian(modldir, hessdir, frecdir, it, ls)
 
     # Get descent direction
-    descent(modldir, graddir, hessdir,
-            descdir, outdir, damping, it, ls)
+    descent(outdir, it, ls)
 
     # First set of optimization values only computes the initial q and
     # sets alpha to 1

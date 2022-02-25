@@ -26,7 +26,7 @@ def read_synt(syntdir, it, ls=None):
 def forward(modldir, metadir, syntdir, it, ls=None):
 
     # Read metadata and model
-    m = read_model(modldir, it, ls)
+    m = read_model(outdir, it, ls)
     X = read_metadata(metadir)
 
     # Forward modeling
