@@ -4,13 +4,10 @@ Exectuable that checks and writes linesearch parameters for on linesearch
 iteration.
 
 Usage:
-    opt-linesearch <optdir> <descdir> <graddir> <costdir> <it> <ls>
+    ioi-linesearch <optdir> <descdir> <graddir> <costdir> <it> <ls>
 
 where:
     optdir   - directory containing the optimization parameters
-    descdir  - directory containing the descent directions
-    graddir  - directory containing the gradients
-    costdir  - directory containing the costs
     it       - iteration number
     ls       - linesearch number
 

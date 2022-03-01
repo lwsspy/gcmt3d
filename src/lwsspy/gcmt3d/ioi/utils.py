@@ -361,3 +361,32 @@ def prepare_simulation_dirs(outdir, ssyndir, sfredir, metadir, simdir):
 
                 # Write Stuff to Par_file
                 write_parfile(dsdm_pars, dsdm_parfile)
+
+
+def create_event_dir(cmtfile, inputfile):
+
+    outdir, modldir, metadir, datadir, simudir, ssyndir, sfredir, syntdir, \
+        frecdir, costdir, graddir, hessdir, descdir, optdir = \
+        optimdir(inputfile, cmtfile)
+
+    prepare_inversion_dir(cmtfile, outdir, inputfile)
+
+    # Prepare model
+    prepare_model(outdir)
+
+    # Preparing the simulation directory
+    prepare_simulation_dirs(outdir)
+
+    # Prep Stations
+    prepare_stations(outdir)
+
+    return outdir
+
+
+def read_events(eventdir):
+    events = []
+    for eventfile in os.listdir(eventdir):
+        events.append(os.path.join(eventdir, eventfile))
+    print(events)
+    return events
+

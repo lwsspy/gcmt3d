@@ -1,19 +1,12 @@
 """
 
-Exectuable that checks and writes linesearch parameters for on linesearch
-iteration.
+Exectuable that checks whether an iteration should be added.
 
 Usage:
-    opt-linesearch <optdir> <descdir> <graddir> <costdir> <it> <ls>
-optdir, modldir, costdir, descdir, statdir, it, ls,
-        stopping_criterion=0.01,
-        stopping_criterion_model=0.01,
-        stopping_criterion_cost_change=0.001
+    ioi-check-done <optdir> <it> <ls>
+
 where:
     optdir   - directory containing the optimization parameters
-    descdir  - directory containing the descent directions
-    graddir  - directory containing the gradients
-    costdir  - directory containing the costs
     it       - iteration number
     ls       - linesearch number
 
@@ -25,13 +18,13 @@ from ..opt import check_done
 
 def bin():
 
-    if len(argv) != 6+1:
+    if len(argv) != 1+3:
         print("Note enough or too few input parameters.")
         print(__doc__)
         exit()
 
     # Get command line arguments
-    optdir, descdir, graddir, costdir, it, ls = argv[1:7]
+    optdir, it, ls = argv[1:4]
 
     # Clearlog
-    check_done(optdir, modldir, costdir, descdir, statdir, it, ls)
+    check_done(optdir, it, ls)
