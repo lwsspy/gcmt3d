@@ -2,6 +2,7 @@ from curses import meta
 import os
 import numpy as np
 from .constants import Constants
+from .log import get_iter, get_step
 
 
 def write_perturbation(perturbation, outdir):
@@ -57,7 +58,7 @@ def get_simpars(outdir):
     return idx
 
 
-def write_model(m, outdir, it, ls=None):
+def write_model(m, outdir,it, ls=None):
     """Takes in model vector, modldirectory, iteration and linesearch number
     and write model to modl directory.
 
@@ -100,6 +101,7 @@ def read_model(outdir, it, ls=None):
     ndarray
         model vector
     """
+    
     if ls is not None:
         fname = f"m_it{it:05d}_ls{ls:05d}.npy"
     else:

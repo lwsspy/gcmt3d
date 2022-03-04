@@ -22,7 +22,7 @@ where:
 """
 
 from sys import exit, argv
-from ..linesearch import check_optvals
+from ..functions.linesearch import check_optvals
 
 
 def bin():

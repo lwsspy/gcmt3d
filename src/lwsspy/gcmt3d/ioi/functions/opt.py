@@ -11,19 +11,23 @@ from .kernel import read_dsdm, write_dsdm
 from .gradient import read_gradient, write_gradient
 from .hessian import read_hessian, write_hessian
 from .linesearch import read_optvals
-from .log import write_status
+from .log import write_status, get_iter, get_step
 
 
 def read_optparams(paramdir):
     pass
 
 
-def update_model(outdir, it, ls):
+def update_model(outdir):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Read model, descent direction, and optvals (alpha)
     m = read_model(outdir, it, ls - 1)
-    dm = read_descent(outdir, it, ls - 1)
-    _, _, _, alpha, _, _, _ = read_optvals(outdir, it, ls - 1)
+    dm = read_descent(outdir, it, 0)
+    _, _, _, alpha, _, _, _ = read_optvals(outdir, it, ls-1)
 
     # Compute new model
     m_new = m + alpha * dm
@@ -34,7 +38,11 @@ def update_model(outdir, it, ls):
     # print("      m: ", np.array2string(m_new, max_line_width=int(1e10)))
 
 
-def update_mcgh(outdir, it, ls):
+def update_mcgh(outdir):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Read input params
     processparams = read_yaml_file(os.path.join(outdir, 'process.yml'))
@@ -49,10 +57,10 @@ def update_mcgh(outdir, it, ls):
     h = read_hessian(outdir, it, ls)
 
     # Write for the first iteration and 0 ls
-    write_model(m, outdir, it + 1, 0)
-    write_cost(c, outdir, it + 1, 0)
-    write_gradient(g, outdir, it + 1, 0)
-    write_hessian(h, outdir, it + 1, 0)
+    write_model(m, outdir, it+1, 0)
+    write_cost(c, outdir, it+1, 0)
+    write_gradient(g, outdir, it+1, 0)
+    write_hessian(h, outdir, it+1, 0)
 
     # Get number of parameters
     NM = len(read_model(outdir, it, ls))
@@ -60,11 +68,11 @@ def update_mcgh(outdir, it, ls):
     # Copy the
     for _wtype in wavetypes:
         synt = read_synt(outdir, _wtype, it, ls)
-        write_synt(synt, outdir, _wtype, it + 1, 0)
+        write_synt(synt, outdir, _wtype, it+1, 0)
 
         for _i in range(NM):
             dsdm = read_dsdm(outdir, _wtype, _i, it, ls)
-            write_dsdm(dsdm, outdir, _wtype, _i, it + 1, 0)
+            write_dsdm(dsdm, outdir, _wtype, _i, it+1, 0)
 
 
 def check_status(statdir):
@@ -82,8 +90,12 @@ def check_status(statdir):
         return True
 
 
-def check_done(outdir, it, ls):
+def check_done(outdir):
 
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
+    
     # Read input parameters and optimization characteristics
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 

@@ -1,7 +1,6 @@
 # from lwsspy.utils.reset_cpu_affinity import reset_cpu_affinity
 import os
 from copy import deepcopy
-from lwsspy.gcmt3d.ioi.kernel import write_dsdm
 from obspy import read, read_events, Stream
 from lwsspy.utils.isipython import isipython
 from lwsspy.utils.io import read_yaml_file
@@ -15,12 +14,11 @@ from lwsspy.seismo.read_inventory import flex_read_inventory as read_inventory
 from lwsspy.seismo.stream_multiply import stream_multiply
 
 from .constants import Constants
-from .utils import write_pickle
 from .model import read_model, read_model_names, read_perturbation
 from .kernel import write_dsdm
 from .forward import write_synt, read_synt
-from .data import write_data, read_data, write_data_windowed, read_data_windowed
-
+from .data import write_data, read_data, write_data_windowed
+from .log import get_iter, get_step
 
 def process_data(outdir):
 
@@ -87,12 +85,15 @@ def process_data(outdir):
         write_data(pdata, outdir, _wtype)
 
 
-def process_synt(outdir, it, ls):
+def process_synt(outdir):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Define directory
     metadir = os.path.join(outdir, 'meta')
     simudir = os.path.join(outdir, 'simu')
-    syntdir = os.path.join(outdir, 'synt')
 
     # Get CMT
     cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
@@ -153,14 +154,17 @@ def process_synt(outdir, it, ls):
         write_synt(pdata, outdir, _wtype, it, ls)
 
 
-def wprocess_synt(args):
-    process_synt(*args)
+# def wprocess_synt(args):
+#     process_synt(*args)
 
 
-def process_dsdm(outdir, nm, it, ls):
+def process_dsdm(outdir, nm):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Define directory
-    modldir = os.path.join(outdir, 'modl')
     metadir = os.path.join(outdir, 'meta')
     simudir = os.path.join(outdir, 'simu')
     sdsmdir = os.path.join(simudir, 'dsdm')
@@ -172,7 +176,6 @@ def process_dsdm(outdir, nm, it, ls):
     ))
 
     # Read model and model name
-    model = read_model(outdir, it, ls)[nm]
     mname = read_model_names(outdir)[nm]
     perturbation = read_perturbation(outdir)[nm]
 
@@ -278,8 +281,6 @@ def window(outdir):
 
     # Get dirs
     metadir = os.path.join(outdir, 'meta')
-    datadir = os.path.join(outdir, 'data')
-    syntdir = os.path.join(outdir, 'synt')
 
     # Get process parameters
     processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))

@@ -11,7 +11,7 @@ where:
 """
 
 from sys import exit, argv
-from ..opt import check_status
+from ..functions.opt import check_status
 
 
 def bin():

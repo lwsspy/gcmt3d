@@ -4,10 +4,11 @@ from lwsspy.seismo.costgradhess import CostGradHess
 from lwsspy.utils.io import read_yaml_file
 from .data import read_data_windowed
 from .forward import read_synt
+from .log import get_iter, get_step
 
 
 def write_cost(c, outdir, it, ls=None):
-
+    
     # Get directory
     costdir = os.path.join(outdir, 'cost')
 
@@ -32,7 +33,11 @@ def read_cost(outdir, it, ls=None):
     return np.load(file)
 
 
-def cost(outdir, it, ls=None):
+def cost(outdir):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Get input parameters
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))

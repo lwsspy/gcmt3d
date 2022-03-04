@@ -6,42 +6,49 @@ from .data import read_data_windowed
 from .forward import read_synt
 from .kernel import read_dsdm
 from .model import read_model_names
+from .log import get_step, get_iter
 
 
-def write_gradient(g, outdir, it, ls=None):
+def write_hessian(h, outdir, it, ls):
 
     # Get graddir
-    graddir = os.path.join(outdir, 'grad')
+    hessdir = os.path.join(outdir, 'hess')
 
     # Get filename
     if ls is not None:
-        fname = f"grad_it{it:05d}_ls{ls:05d}.npy"
+        fname = f"hess_it{it:05d}_ls{ls:05d}.npy"
     else:
-        fname = f"grad_it{it:05d}.npy"
+        fname = f"hess_it{it:05d}.npy"
 
     # Full filename
-    file = os.path.join(graddir, fname)
+    file = os.path.join(hessdir, fname)
 
     # Save
-    np.save(file, g)
+    np.save(file, h)
 
 
-def read_gradient(outdir, it, ls=None):
+def read_hessian(outdir, it, ls):
 
     # Get graddir
-    graddir = os.path.join(outdir, 'grad')
+    hessdir = os.path.join(outdir, 'hess')
 
+    # Get filename
     if ls is not None:
-        fname = f"grad_it{it:05d}_ls{ls:05d}.npy"
+        fname = f"hess_it{it:05d}_ls{ls:05d}.npy"
     else:
-        fname = f"grad_it{it:05d}.npy"
+        fname = f"hess_it{it:05d}.npy"
 
-    file = os.path.join(graddir, fname)
+    # Full filename
+    file = os.path.join(hessdir, fname)
 
     return np.load(file)
 
 
-def gradient(outdir, it, ls=None):
+def hessian(outdir):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Get input parameters
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
@@ -59,7 +66,7 @@ def gradient(outdir, it, ls=None):
     NM = len(read_model_names(outdir))
 
     # Compute total cost
-    grad = np.zeros(NM)
+    hess = np.zeros((NM, NM))
 
     for _wtype in processparams.keys():
 
@@ -81,11 +88,9 @@ def gradient(outdir, it, ls=None):
             weight=weighting)
 
         if weighting:
-            grad += cgh.grad() * processparams[_wtype]["weight"]
+            hess += cgh.hess() * processparams[_wtype]["weight"]
         else:
-            grad += cgh.grad()
+            hess += cgh.hess()
 
     # Write Gradients
-    write_gradient(grad, outdir, it, ls)
-
-    print("      g: ", np.array2string(grad, max_line_width=int(1e10)))
+    write_hessian(hess, outdir, it, ls)

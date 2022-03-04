@@ -7,6 +7,7 @@ from .wolfe import wolfe_conditions, update_alpha
 from .cost import read_cost
 from .descent import read_descent
 from .gradient import read_gradient
+from .log import get_iter, get_step
 
 
 def write_optvals(optvals, outdir, it, ls=None):
@@ -73,23 +74,27 @@ def read_optvals(outdir, it, ls=None):
     return optvals
 
 
-def check_optvals(outdir, it, ls):
+def check_optvals(outdir, status=True):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Read inputparams
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
     nls_max = inputparams['optimization']['nls_max']
 
     # Read previous set of optimization values
-    _, alpha_l, alpha_r, alpha, w1, w2, w3 = read_optvals(
-        outdir, it, ls)
+    _, alpha_l, alpha_r, alpha, w1, w2, w3 = read_optvals(outdir, it, ls)
 
     # Linesearch failed if w3 is False
     if w3 is False:
-        write_status(
-            outdir,
-            f"FAIL: NOT A DESCENT DIRECTION at it {it:05d} and ls {ls:05d}.")
+        if status:
+            write_status(
+                outdir,
+                f"FAIL: NOT A DESCENT DIRECTION at it {it:05d} and ls {ls:05d}.")
 
-        return False
+        return "FAIL"
 
     # Line search successful
     elif (w1 is True) and (w2 is True):
@@ -98,34 +103,49 @@ def check_optvals(outdir, it, ls):
         initcost = read_cost(outdir, 0, 0)
         cost = read_cost(outdir, it, ls)
 
-        # Write log message
-        write_log(outdir,
-                  f"iter = {it}, "
-                  f"f/fo={cost/initcost:5.4e}, "
-                  f"nls = {ls}, wolfe1 = {w1} wolfe2 = {w2}, "
-                  f"a={alpha}, al={alpha_l}, ar={alpha_r}")
+        if status:
+            # Write log message
+            write_log(outdir,
+                      f"iter = {it}, "
+                      f"f/fo={cost/initcost:5.4e}, "
+                      f"nls = {ls}, wolfe1 = {w1} wolfe2 = {w2}, "
+                      f"a={alpha}, al={alpha_l}, ar={alpha_r}")
 
-        write_status(
-            outdir,
-            f"SUCCESS: it {it:05d} and ls {ls:05d}.")
+            write_status(
+                outdir,
+                f"SUCCESS: it {it:05d} and ls {ls:05d}.")
 
-        return False
+        return "SUCCESS"
 
     # Check linesearch
     elif ls == (nls_max-1) and ((w1 is False) or (w2 is False)):
-        write_status(
-            outdir,
-            f"FAIL: LS ENDED at it {it:05d} and ls {ls:05d}.")
+        if status:
+            write_status(
+                outdir,
+                f"FAIL: LS ENDED at it {it:05d} and ls {ls:05d}.")
 
-        return False
+        return "FAIL"
+
+    # None of it failed add step flag
+    else:
+        if status:
+            write_status(
+                outdir,
+                f"ADDSTEP: it {it:05d} and ls {ls:05d}.")
+
+        return "ADDSTEP"
 
     return True
 
 
-def linesearch(outdir, it, ls):
+def linesearch(outdir):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     # Get the model update and grad
-    dm = read_descent(outdir, it, ls)
+    dm = read_descent(outdir, it, 0)
     g = read_gradient(outdir, it, ls)
 
     # Compute q descent dot grad
@@ -146,10 +166,10 @@ def linesearch(outdir, it, ls):
         q_old, alpha_l, alpha_r, alpha, _, _, _ = read_optvals(
             outdir, it, ls-1)
 
-        # Read current q and new queue
+        # Read current cost
         cost = read_cost(outdir, it, ls)
 
-        # Read current q and new queue
+        # Read old cost
         cost_old = read_cost(outdir, it, ls-1)
 
         # Safeguard check for inf and nans...

@@ -1,7 +1,9 @@
+from cgitb import reset
 import os
 import shutil
 import numpy as np
 import _pickle as pickle
+from distutils.dir_util import copy_tree
 # from obspy import read_events
 from .constants import Constants
 from .model import read_model_names, write_model, write_model_names, \
@@ -14,7 +16,7 @@ from lwsspy.seismo.specfem.inv2STATIONS import inv2STATIONS
 from lwsspy.seismo.specfem.createsimdir import createsimdir
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from lwsspy.gcmt3d.process_classifier import ProcessParams
-
+from .log import reset_iter, reset_step, write_status
 
 def write_pickle(filename, obj):
     with open(filename, 'wb') as f:
@@ -49,6 +51,53 @@ def rmdir(cdir):
         Removes directory recursively
     """
     shutil.rmtree(cdir)
+
+
+def cpdir(src, dst):
+    """Copies entire directory from src to dst
+
+    Parameters
+    ----------
+    src : str
+        Source directory
+    dst : str
+        Destination directory
+    """
+    copy_tree(src, dst)
+
+
+def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
+
+    # Read inputfile
+    input_params = read_yaml_file(inputfile)
+
+    # Get database location
+    databasedir = input_params["datadatabase"]
+
+    # Read CMT file
+    cmtsource = CMTSource.from_CMTSOLUTION_file(cmtfilename)
+    
+    # Get full filename
+    outdir = os.path.join(databasedir, cmtsource.eventname)
+
+    # Define the directories
+    waveforms = os.path.join(outdir, "waveforms")
+    stations = os.path.join(outdir, "stations")
+
+    # Only output outdir if wanted
+    if get_dirs_only is False:
+
+        # Write cmtsolution
+        cmtsource.write_CMTSOLUTION_file(os.path.join(outdir, 'init_model.cmt'))
+
+        # Write input file
+        write_yaml_file(input_params, os.path.join(outdir, 'input.yml'))
+
+        # Create directories
+        createdir(waveforms)
+        createdir(stations)
+
+    return outdir, waveforms, stations
 
 
 # Setup directories
@@ -363,23 +412,40 @@ def prepare_simulation_dirs(outdir):
             # Write Stuff to Par_file
             write_parfile(dsdm_pars, dsdm_parfile)
 
-
 def create_event_dir(cmtfile, inputfile):
 
-    outdir, modldir, metadir, datadir, simudir, ssyndir, sfredir, syntdir, \
-        frecdir, costdir, graddir, hessdir, descdir, optdir = \
-        optimdir(inputfile, cmtfile)
+    # Get main dir
+    out = optimdir(inputfile, cmtfile)
+    outdir = out[0]
 
+    # Prep inversion directories
     prepare_inversion_dir(cmtfile, outdir, inputfile)
 
     # Prepare model
     prepare_model(outdir)
 
-    # Preparing the simulation directory
-    prepare_simulation_dirs(outdir)
+
+def create_forward_dirs(cmtfile, inputfile):
+
+    # Get main dir
+    out = optimdir(inputfile, cmtfile)
+    outdir = out[0]
+
+    # Prep inversion directories
+    prepare_inversion_dir(cmtfile, outdir, inputfile)
+
+    # Prepare model
+    prepare_model(outdir)
 
     # Prep Stations
     prepare_stations(outdir)
+
+    # Preparing the simulation directory
+    prepare_simulation_dirs(outdir)
+
+    # Reset iteration counter and linesearch counter
+    reset_iter(outdir)
+    reset_step(outdir)
 
     return outdir
 

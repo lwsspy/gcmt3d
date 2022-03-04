@@ -1,0 +1,12 @@
+[job]
+system = ["nnodes.job", "Tiger"]
+name = "source"
+nnodes = 3
+account = "GEO111"
+walltime = 120.0
+gap = 2.0
+debug = true
+
+[root]
+task = ["lwsspy.gcmt3d.ioi.nnodes_download.source", "main"]
+task_nnodes = 1

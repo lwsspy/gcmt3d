@@ -1,15 +1,14 @@
 import imp
 import os
 from copy import deepcopy
-import numpy as np
 from obspy import Stream
 from lwsspy.seismo.source import CMTSource
 
 
 from .constants import Constants
 from .model import read_model, read_model_names, read_perturbation
-from .metadata import read_metadata
 from .utils import write_pickle, read_pickle
+from .log import get_iter, get_step
 
 
 def write_dsdm(dsdm: Stream, outdir, wavetype, nm, it, ls=None):
@@ -32,6 +31,10 @@ def write_dsdm(dsdm: Stream, outdir, wavetype, nm, it, ls=None):
 
 def read_dsdm(outdir, wavetype, nm, it, ls=None) -> Stream:
 
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
+
     # Get the synthetics directory
     dsdmdir = os.path.join(outdir, 'dsdm')
 
@@ -47,7 +50,11 @@ def read_dsdm(outdir, wavetype, nm, it, ls=None) -> Stream:
     return read_pickle(file)
 
 
-def update_cmt_dsdm(outdir, it, ls):
+def update_cmt_dsdm(outdir):
+
+    # Get iter,step
+    it = get_iter(outdir)
+    ls = get_step(outdir)
 
     modldir = os.path.join(outdir, 'modl')
     metadir = os.path.join(outdir, 'meta')

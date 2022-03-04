@@ -1,6 +1,9 @@
 # Inputs. Put full path for safety (~ often isn't recognized by Python)
 database: /scratch/gpfs/lsawade/testdatabase
 
+# For creating a 
+datadatabase: /scratch/gpfs/lsawade/database
+
 # Specfem Directory
 specfem: /scratch/gpfs/lsawade/SpecfemMagic/specfem3d_globe
 
@@ -44,15 +47,15 @@ solution_label: "gcmt3d"
 
 # Optimization parameters
 parameters:
-  latitude:
-    scale: 1.0
-    pert: null
-  longitude:
-    scale: 1.0
-    pert: null
-  time_shift:
-    scale: 1.0
-    pert: null
+  # latitude:
+  #   scale: 1.0
+  #   pert: null
+  # longitude:
+  #   scale: 1.0
+  #   pert: null
+  # time_shift:
+  #   scale: 1.0
+  #   pert: null
   depth_in_m:
     scale: 1.0
     pert: null

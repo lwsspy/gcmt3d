@@ -2,14 +2,14 @@ import os
 from lwsspy.utils.io import read_yaml_file
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
-
+paramsdir = os.path.dirname(scriptdir)
 
 class Constants:
 
     # Locations
     # ---------
-    processdict = read_yaml_file(os.path.join(scriptdir, "process.yml"))
-    inputfilename = os.path.join(os.path.join(scriptdir, "input.yml"))
+    processdict = read_yaml_file(os.path.join(paramsdir, "process.yml"))
+    inputfilename = os.path.join(os.path.join(paramsdir, "input.yml"))
 
     # Download dictionary
     download_dict = dict(

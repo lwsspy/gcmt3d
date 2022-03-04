@@ -13,7 +13,7 @@ where:
 """
 
 from sys import exit, argv
-from ..opt import check_done
+from ..functions.opt import check_done
 
 
 def bin():

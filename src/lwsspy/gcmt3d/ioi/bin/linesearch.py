@@ -14,7 +14,7 @@ where:
 """
 
 from sys import exit, argv
-from ..linesearch import linesearch
+from ..functions.linesearch import linesearch
 
 
 def bin():
