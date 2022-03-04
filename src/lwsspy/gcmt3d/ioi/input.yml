@@ -1,8 +1,11 @@
 # Inputs. Put full path for safety (~ often isn't recognized by Python)
 database: /scratch/gpfs/lsawade/testdatabase
 
-# For creating a 
+# For creating and grabbing from the observed data
 datadatabase: /scratch/gpfs/lsawade/database
+
+# Eventstatus directory
+event_status: /home/lsawade/events
 
 # Specfem Directory
 specfem: /scratch/gpfs/lsawade/SpecfemMagic/specfem3d_globe

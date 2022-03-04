@@ -4,11 +4,11 @@ from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import get_data
 from lwsspy.gcmt3d.ioi.functions.utils import optimdir, downloaddir, read_events
+from lwsspy.gcmt3d.ioi.functions.constants import Constants
 
 # %%
 eventdir = "/home/lsawade/events"
-inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
-processfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/process.yml"
+inputfile = Constants.inputfilename
 
 # ----------------------------- MAIN NODE -------------------------------------
 # Loops over events: TODO smarter event check
