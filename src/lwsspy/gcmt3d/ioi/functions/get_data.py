@@ -6,6 +6,7 @@ from lwsspy.seismo.download_waveforms_to_storage import download_waveforms_to_st
 
 from .constants import Constants
 from .utils import cpdir
+from .log import write_status
 
 # % Get Model CMT
 def get_data(outdir: str):
@@ -36,10 +37,20 @@ def get_data(outdir: str):
     starttime = cmtsource.cmt_time + starttime_offset
     endtime = cmtsource.cmt_time + duration + endtime_offset
 
+    # WRITESTATUS
+    write_status(outdir, "DOWNLOADING")
+
     download_waveforms_to_storage(
         outdir, starttime=starttime, endtime=endtime,
         waveform_storage=waveformdir, station_storage=stationdir,
         **download_dict)
+
+    # Check whether download can be called successful
+    if (len(os.listdir(waveformdir)) <= 30) \
+            or (len(os.listdir(stationdir)) <= 10):
+        write_status(outdir, "FAILED")
+    else:
+        write_status(outdir, "DOWNLOADED")
 
     return None
 

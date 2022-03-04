@@ -23,8 +23,6 @@ inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
 processfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/process.yml"
 
 RESET = True
-# Download the data
-# get_data(outdir)
 
 # Nparams = int(read_model(modldir, 0, 0).size)
 

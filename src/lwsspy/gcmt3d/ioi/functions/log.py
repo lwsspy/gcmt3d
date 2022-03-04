@@ -11,6 +11,18 @@ def write_status(outdir, message):
         f.write(message)
 
 
+def read_status(outdir):
+
+    statdir = outdir
+    fname = "STATUS.txt"
+    file = os.path.join(statdir, fname)
+
+    with open(file, "r") as f:
+        message = f.read()
+    
+    return message
+
+
 def write_log(outdir, message):
 
     logdir = outdir

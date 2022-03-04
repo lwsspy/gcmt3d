@@ -1,19 +1,28 @@
 # %%
 import os
+from pprint import pprint
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import get_data
 from lwsspy.gcmt3d.ioi.functions.utils import optimdir, downloaddir, read_events
 from lwsspy.gcmt3d.ioi.functions.constants import Constants
 
-# %%
-eventdir = "/home/lsawade/events"
-inputfile = Constants.inputfilename
-
 # ----------------------------- MAIN NODE -------------------------------------
 # Loops over events: TODO smarter event check
 def main(node: Node):
+
+    inputfile = node.inputfile
+
     node.concurrent = True
+
+    print("\n node attribs \n")
+    pprint(node.__dict__)
+
+    print("\n parent attribs \n")
+    try:
+        pprint(node.parent.__dict__)
+    except Exception as e:
+        print(e)
 
     for event in read_events(eventdir):
         # event = read_events(eventdir)

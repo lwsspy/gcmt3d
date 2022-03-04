@@ -80,6 +80,9 @@ def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
     # Get full filename
     outdir = os.path.join(databasedir, cmtsource.eventname)
 
+    # WRITESTATUS
+    write_status(outdir, "CREATED")
+
     # Define the directories
     waveforms = os.path.join(outdir, "waveforms")
     stations = os.path.join(outdir, "stations")

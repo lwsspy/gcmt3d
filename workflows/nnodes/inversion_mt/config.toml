@@ -10,3 +10,4 @@ debug = true
 [root]
 task = ["lwsspy.gcmt3d.ioi.nnodes.source", "main"]
 task_nnodes = 1
+inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
