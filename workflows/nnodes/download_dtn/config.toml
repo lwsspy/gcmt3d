@@ -1,0 +1,13 @@
+[job]
+system = ["nnodes.job", "Tiger"]
+name = "download"
+nnodes = 1
+account = "GEO111"
+walltime = 120.0
+gap = 2.0
+debug = true
+
+[root]
+task = ["lwsspy.gcmt3d.ioi.nnodes.download", "main"]
+task_nnodes = 1
+inputfile = "/ccs/home/lsawade/input.yml"
