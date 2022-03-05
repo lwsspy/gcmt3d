@@ -60,8 +60,8 @@ def iteration(node: Node):
         # Create the inversion directory/makesure all things are in place
         create_forward_dirs(node.event, node.inputfile)
 
-        # Stage data
-        node.add(get_data)
+        # # Stage data
+        # node.add(get_data)
 
         # Forward and frechet modeling
         node.add(forward_frechet, concurrent=True)

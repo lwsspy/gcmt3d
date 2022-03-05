@@ -3,11 +3,7 @@ import os
 import shutil
 import numpy as np
 import _pickle as pickle
-from distutils.dir_util import copy_tree
 # from obspy import read_events
-from .constants import Constants
-from .model import read_model_names, write_model, write_model_names, \
-    write_scaling, write_perturbation
 from lwsspy.seismo.specfem.read_parfile import read_parfile
 from lwsspy.seismo.specfem.write_parfile import write_parfile
 from lwsspy.seismo.source import CMTSource
@@ -16,7 +12,12 @@ from lwsspy.seismo.specfem.inv2STATIONS import inv2STATIONS
 from lwsspy.seismo.specfem.createsimdir import createsimdir
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from lwsspy.gcmt3d.process_classifier import ProcessParams
+from .constants import Constants
+from .model import read_model_names, write_model, write_model_names, \
+    write_scaling, write_perturbation
 from .log import reset_iter, reset_step, write_status
+from .get_data import stage_data
+
 
 def write_pickle(filename, obj):
     with open(filename, 'wb') as f:
@@ -52,20 +53,6 @@ def rmdir(cdir):
     """
     shutil.rmtree(cdir)
 
-
-def cpdir(src, dst):
-    """Copies entire directory from src to dst
-
-    Parameters
-    ----------
-    src : str
-        Source directory
-    dst : str
-        Destination directory
-    """
-    copy_tree(src, dst)
-
-
 def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
 
     # Read inputfile
@@ -89,7 +76,7 @@ def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
         
         # Create maindirectory
         createdir(outdir)
-        
+
         # WRITESTATUS
         write_status(outdir, "CREATED")
 
@@ -442,6 +429,9 @@ def create_forward_dirs(cmtfile, inputfile):
 
     # Prepare model
     prepare_model(outdir)
+
+    # Get data
+    stage_data(outdir)
 
     # Prep Stations
     prepare_stations(outdir)
