@@ -3,7 +3,7 @@ import os
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import stage_data
-from lwsspy.gcmt3d.ioi.functions.utils import optimdir, create_forward_dirs, read_events
+from lwsspy.gcmt3d.ioi.functions.utils import optimdir, create_forward_dirs
 from lwsspy.gcmt3d.ioi.functions.forward import update_cmt_synt
 from lwsspy.gcmt3d.ioi.functions.kernel import update_cmt_dsdm
 from lwsspy.gcmt3d.ioi.functions.processing import process_data, window, process_synt, wprocess_dsdm
@@ -23,11 +23,10 @@ from lwsspy.gcmt3d.ioi.functions.events import check_events_todo
 # Loops over events: TODO smarter event check
 def main(node: Node):
     node.concurrent = True
-    
-    events = check_events_todo(node.inputfile)
-    print(events)
-    for event in events:
 
+    events = check_events_todo(node.inputfile)
+
+    for event in events:
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
         out = optimdir(node.inputfile, event, get_dirs_only=True)
         outdir = out[0]
