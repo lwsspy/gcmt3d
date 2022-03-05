@@ -8,6 +8,7 @@ def write_status(outdir, message):
     file = os.path.join(statdir, fname)
 
     with open(file, "w") as f:
+        f.truncate(0)
         f.write(message)
 
 

@@ -27,8 +27,8 @@ downloadparams: null
 
 # Max duration and offsets
 duration: 7200
-starttime_offset: -50.0
-endtime_offset: 50.0
+starttime_offset: -120.0
+endtime_offset: 120.0
 merge_windows: True
 normalize: True
 weighting: True

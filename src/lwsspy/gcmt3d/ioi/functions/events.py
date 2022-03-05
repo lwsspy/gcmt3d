@@ -6,9 +6,12 @@ from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from .utils import createdir
 from .log import read_status
 
+
 def write_event_status(dir, eventname, message):
     with open(os.path.join(dir, eventname), 'w') as f:
+        f.truncate(0)
         f.write(message)
+
 
 def read_event_status(dir, eventname):
     with open(os.path.join(dir, eventname), 'r') as f:
@@ -48,13 +51,16 @@ def create_event_status_dir(eventdir, inputfile):
     write_yaml_file(inputparams, os.path.join(neweventdir, 'input.yml'))
     
     # Eventfiles
-    eventfilelist = os.listdir(eventdir)
+    eventfilelist = [os.path.join(eventdir, i) for i in os.listdir(eventdir)]
 
     # Make catalog
     cat = CMTCatalog.from_file_list(eventfilelist)
 
     # Write CMT's to directory
     cat.cmts2dir(initdir)
+
+    # Check events right after adding them
+    check_events(inputfile)
 
 
 def add_events(eventdir, inputfile):
@@ -81,7 +87,7 @@ def add_events(eventdir, inputfile):
     initdir = os.path.join(neweventdir, "EVENTS_INIT")
 
     # Eventfiles
-    eventfilelist = os.listdir(eventdir)
+    eventfilelist = [os.path.join(eventdir, i) for i in os.listdir(eventdir)]
 
     # Make catalog
     cat = CMTCatalog.from_file_list(eventfilelist)
@@ -101,8 +107,11 @@ def add_events(eventdir, inputfile):
             # Write CMT's to directory
             cat.cmts2file(dst)
 
+    # Check events right after adding them
+    check_events(inputfile)
 
-def check_events(inputfile):
+
+def check_events(inputfile, reset=False):
     """
     Can only be run after the create_event_status_dir. The inputfile
     should be the one in the Event status directory.
@@ -143,14 +152,14 @@ def check_events(inputfile):
     downdir = os.path.join(neweventdir, "DOWNLOADED")
 
     # Get list of eventfile
-    eventfilelist = os.listdir(eventdir)
+    eventfilelist = [os.path.join(eventdir, i) for i in os.listdir(eventdir)]
 
     # Make catalog
     cat = CMTCatalog.from_file_list(eventfilelist)
 
     # Copy event to the init events if it doesn't exist yet
     # Check whether downloaded and if yes, put 1 in to file in
-    # DOWNLOADED 
+    # DOWNLOADED
     for _cmt in cat:
 
         # Eventname
@@ -163,23 +172,38 @@ def check_events(inputfile):
         data_cmt = os.path.join(datadatabase, cmtname)
 
         try:
-            # Check download status    
+            # Check download status
             downstat = read_status(data_cmt)
 
-            if downstat == 'FAILED':
+            # Download fails sometimes (or not enough data)
+            # Then remove set download flag to fail and tell status that
+            # we can't invert
+            if 'FAILED' in downstat:
                 write_event_status(downdir, cmtname, 'FAIL')
                 write_event_status(statdir, cmtname, 'CANT')
                 continue
+
+            # If the download is unfinished set flag to unfinished
+            # and inversion flag to cant
             elif (downstat == 'DOWNLOADING'):
                 write_event_status(downdir, cmtname, 'UNFINISHED')
                 write_event_status(statdir, cmtname, 'CANT')
                 continue
-            elif (downstat == 'CREATED'):
+                
+            # If directory created but not yet downloaded, set
+            # DL flag to needs downloading, and inversion flag to can't
+            elif 'CREATED' in downstat:
                 write_event_status(downdir, cmtname, 'NEEDS_DOWNLOADING')
                 write_event_status(statdir, cmtname, 'CANT')
                 continue
-            elif (downstat == 'DOWNLOADED'):
+                
+            # If data is donwloaded set downloaded stats to true and move on
+            # to check whether we can, or already have inverted
+            elif 'DOWNLOADED' in downstat:
                 write_event_status(downdir, cmtname, 'TRUE')
+            
+            # If the event status is undefined set to needs download
+            # and inversion flag to cant.
             else:
                 write_event_status(downdir, cmtname, 'NEEDS_DOWNLOADING')    
                 write_event_status(statdir, cmtname, 'CANT')
@@ -195,15 +219,33 @@ def check_events(inputfile):
         try:
             inv_stat = read_status(db_cmt)
 
+            # If finshed status is done
             if "FINISHED" in inv_stat:
                 write_event_status(statdir, cmtname, 'DONE')
+
+            # If reset flag is set manually for a specific event
+            elif "RESET" in inv_stat:
+                write_event_status(statdir, cmtname, 'TODO')
+            
+            # If linesearch failed don't add to todo list, unless we reset all 
+            # events
             elif "FAIL" in inv_stat:
-                write_event_status(statdir, cmtname, 'FAIL')
+                if reset:
+                    write_event_status(statdir, cmtname, 'TODO')
+                else:
+                    write_event_status(statdir, cmtname, 'FAIL')
+            
+            # We have certain flags that indicate that an inversion is still
+            # running, in that case make the status running
             elif ("SUCCESS" in inv_stat) or ("ADDSTEP" in inv_stat):
                 write_event_status(statdir, cmtname, 'RUNNING')
+
+            # If we flag isn't covered add to todo list
             else:
                 write_event_status(statdir, cmtname, 'TODO')
-                
+        
+        # Except the case that the status message doesn't exist and add to 
+        # todo list
         except Exception:
             write_event_status(statdir, cmtname, 'TODO')
 
@@ -235,7 +277,7 @@ def check_events_todo(inputfile):
     statdir = os.path.join(neweventdir, "STATUS")
 
     # Get list of eventfile
-    eventfilelist = os.listdir(eventdir)
+    eventfilelist = [os.path.join(eventdir, i) for i in os.listdir(eventdir)]
 
     # Make catalog
     cat = CMTCatalog.from_file_list(eventfilelist)
@@ -254,17 +296,68 @@ def check_events_todo(inputfile):
 
         # If todo append cmtname
         if status == "TODO":
-            TODO.append(eventfilelist[_i])
+            TODO.append(os.path.abspath(eventfilelist[_i]))
 
     return TODO
 
 
-                
+def check_events_todownload(inputfile):
+    """Can only be run after the ``create_event_status_dir``. The inputfile
+    should be the one in the Event status directory."""
+
+    # Read input params
+    inputparams = read_yaml_file(inputfile)
+
+    # Get eventstatusdir
+    event_status_dir = inputparams["event_status"]
+
+    # Get all directories that have events for downloading
+    eventstatusdirs = [
+        os.path.join(event_status_dir, i) for i in os.listdir(event_status_dir)]
+
+    # Make list of events to be downloaded
+    TODOWNLOAD = []
+    
+    for _eventstatusdir in eventstatusdirs:
+
+        # Path to event directory
+        eventdir = os.path.join(_eventstatusdir, "EVENTS_INIT")
+
+        # Downloaded status
+        downdir = os.path.join(_eventstatusdir, "DOWNLOADED")
         
-        
+        # Get list of eventfile
+        eventfilelist = [
+            os.path.join(eventdir, i) for i in os.listdir(eventdir)]
+
+        # Make catalog
+        cat = CMTCatalog.from_file_list(eventfilelist)
+
+        # Check each events downloadstatus
+        for _i, _cmt in enumerate(cat):
+
+            # Eventname
+            cmtname = _cmt.eventname
+
+            # Inversion status
+            status = read_event_status(downdir, cmtname)
+
+            if "TRUE" in status:
+                continue
+            elif "NEEDS_DOWNLOADING" in status:
+                TODOWNLOAD.append(eventfilelist[_i])
+
+    # Filter out repeated events:
+    uniquelist = []
+    unique_idx = []
+    TODOWNLOAD_FILTERED = []
+    for _i, _td in enumerate(TODOWNLOAD):
+        if os.path.basename(_td) in uniquelist:
+            continue
+        else:
+            uniquelist.append(os.path.basename(_td))
+            unique_idx.append(_i)
+            TODOWNLOAD_FILTERED.append(_td)
 
 
-
-
-
-
+    return TODOWNLOAD_FILTERED
