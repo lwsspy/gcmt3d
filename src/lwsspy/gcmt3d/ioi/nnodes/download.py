@@ -31,6 +31,8 @@ def download(node: Node):
     _ = downloaddir(node.inputfile, node.event)
 
     # Download data
-    node.add_mpi(get_data, 1, (4, 0), arg=(node.outdir))
+    node.add_mpi(
+        get_data, 1, (4, 0), arg=(node.outdir), cwd=node.log,
+        name=f"mpi-get-data-{node.eventname}")
 
 

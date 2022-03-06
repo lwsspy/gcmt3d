@@ -58,7 +58,10 @@ def iteration(node: Node):
     if firstiterflag:
 
         # Create the inversion directory/makesure all things are in place
-        node.add_mpi(wcreate_forward_dirs, 1, (1, 0), arg=(node.event, node.inputfile))
+        node.add_mpi(
+            wcreate_forward_dirs, 1, (1, 0), arg=(node.event, node.inputfile),
+            name=f"mpi-create-dir-{node.eventname}",
+            cwd=node.log)
 
         # Forward and frechet modeling
         node.add(forward_frechet, concurrent=True)
@@ -168,13 +171,19 @@ def compute_new_model(node):
 
 # Transer to next iteration
 def transfer_mcgh(node):
-    node.add_mpi(update_mcgh, 1, (4, 0), arg=(node.outdir))
+    node.add_mpi(
+        update_mcgh, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-transfer-mcgh-{node.eventname}",
+        cwd=node.log)
 
 
 # -------------
 # Pre-inversion
 def compute_weights(node):
-    node.add_mpi(compute_weights_func, 1, (4, 0), arg=(node.outdir))
+    node.add_mpi(
+        compute_weights_func, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-weights-{node.eventname}",
+        cwd=node.log)
 
 
 # --------------------------------
@@ -187,22 +196,34 @@ def compute_cgh(node):
 
 # Cost
 def compute_cost(node):
-    node.add_mpi(cost, 1, (4, 0), arg=(node.outdir))
+    node.add_mpi(
+        cost, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-cost-{node.eventname}",
+        cwd=node.log)
 
 
 # Gradient
 def compute_gradient(node):
-    node.add_mpi(gradient, 1, (4, 0), arg=(node.outdir))
+    node.add_mpi(
+        gradient, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-grad-{node.eventname}",
+        cwd=node.log)
 
 
 # Hessian
 def compute_hessian(node):
-    node.add_mpi(hessian, 1, (4, 0), arg=(node.outdir))
+    node.add_mpi(
+        hessian, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-hess-{node.eventname}",
+        cwd=node.log)
 
 
 # Descent
 def compute_descent(node):
-    node.add_mpi(descent, 1, (4, 0), arg=(node.outdir))
+    node.add_mpi(
+        descent, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-descent-{node.eventname}",
+        cwd=node.log)
 
 
 # ----------
