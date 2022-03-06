@@ -1,0 +1,18 @@
+#!/bin/bash
+#BSUB -J inversion
+#BSUB -W 1:00
+#BSUB -nnodes 4
+#BSUB -o inversion.%J.o
+#BSUB -e inversion.%J.e
+
+# Get modules for specfem
+module purge
+module load gcc spectrum-mpi cuda cmake boost
+
+# Initialize Anaconda
+. "/ccs/home/lsawade/anaconda3_summit/etc/profile.d/conda.sh" && conda activate lwsspy
+
+# Change directory to workflow dir
+cd /ccs/home/lsawade/lwsspy_summit/lwsspy.gcmt3d/workflows/nnodes/inversion_mt_summit
+rm -f root.pickle
+python -c "from nnodes import root; root.run()"
