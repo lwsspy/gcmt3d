@@ -445,6 +445,9 @@ def create_forward_dirs(cmtfile, inputfile):
 
     return outdir
 
+def wcreate_forward_dirs(args):
+    return create_forward_dirs(*args)
+
 
 def read_events(eventdir):
     events = []

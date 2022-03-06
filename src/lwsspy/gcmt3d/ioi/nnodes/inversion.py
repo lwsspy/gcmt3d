@@ -3,7 +3,7 @@ import os
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import stage_data
-from lwsspy.gcmt3d.ioi.functions.utils import optimdir, create_forward_dirs
+from lwsspy.gcmt3d.ioi.functions.utils import optimdir, wcreate_forward_dirs
 from lwsspy.gcmt3d.ioi.functions.forward import update_cmt_synt
 from lwsspy.gcmt3d.ioi.functions.kernel import update_cmt_dsdm
 from lwsspy.gcmt3d.ioi.functions.processing import process_data, window, process_synt, wprocess_dsdm
@@ -56,11 +56,12 @@ def iteration(node: Node):
         firstiterflag = True
 
     if firstiterflag:
-        # Create the inversion directory/makesure all things are in place
-        create_forward_dirs(node.event, node.inputfile)
 
-        # # Stage data
-        # node.add(get_data)
+        # Create the inversion directory/makesure all things are in place
+        node.add_mpi(
+            wcreate_forward_dirs, 1, (1, 0), arg=(node.event, node.inputfile),
+            name=f"mpi-create-dir-{node.eventname}",
+            cwd=node.log)
 
         # Forward and frechet modeling
         node.add(forward_frechet, concurrent=True)
@@ -107,18 +108,12 @@ def search_step(node):
 
 # ----------------------------- AUXILIARY NODES -------------------------------
 
-# Staging data
-
-def get_data(node: Node):
-    print("Getting data from data repo.")
-    stage_data(node.outdir)
-
 # -------------------
 # Forward Computation
 def forward_frechet(node):
     node.add(forward, concurrent=True)
     node.add(frechet, concurrent=True)
-    # node.add_mpi(queue_multiprocess_stream, 1, (28, 0), args=(st, ...))
+
 
 # Forward synthetics
 def forward(node):
@@ -176,13 +171,19 @@ def compute_new_model(node):
 
 # Transer to next iteration
 def transfer_mcgh(node):
-    update_mcgh(node.outdir)
+    node.add_mpi(
+        update_mcgh, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-transfer-mcgh-{node.eventname}",
+        cwd=node.log)
 
 
 # -------------
 # Pre-inversion
 def compute_weights(node):
-    compute_weights_func(node.outdir)
+    node.add_mpi(
+        compute_weights_func, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-weights-{node.eventname}",
+        cwd=node.log)
 
 
 # --------------------------------
@@ -195,30 +196,40 @@ def compute_cgh(node):
 
 # Cost
 def compute_cost(node):
-    cost(node.outdir)
+    node.add_mpi(
+        cost, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-cost-{node.eventname}",
+        cwd=node.log)
 
 
 # Gradient
 def compute_gradient(node):
-    gradient(node.outdir)
+    node.add_mpi(
+        gradient, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-grad-{node.eventname}",
+        cwd=node.log)
 
 
 # Hessian
 def compute_hessian(node):
-    hessian(node.outdir)
+    node.add_mpi(
+        hessian, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-hess-{node.eventname}",
+        cwd=node.log)
 
 
 # Descent
 def compute_descent(node):
-    descent(node.outdir)
+    node.add_mpi(
+        descent, 1, (4, 0), arg=(node.outdir),
+        name=f"mpi-compute-descent-{node.eventname}",
+        cwd=node.log)
 
 
 # ----------
 # Linesearch
 def compute_optvals(node):
     get_optvals(node.outdir)
-
-
 
 # ----------------
 # Inversion checks
@@ -241,7 +252,6 @@ def iteration_check(node):
 def search_check(node):
     # Check linesearch result.
     flag = check_optvals(node.outdir)
-    
 
     if flag == "FAIL":
         pass
