@@ -1,11 +1,12 @@
 [job]
-system = ["nnodes.job", "Tiger"]
+system = ["nnodes.job", "Summit"]
 name = "cmtinversion"
 nnodes = 4
 account = "GEO111"
 walltime = 60.0
 gap = 2.0
 debug = true
+node_splittable = true
 
 [root]
 task = ["lwsspy.gcmt3d.ioi.nnodes.inversion", "main"]
@@ -13,5 +14,5 @@ task_nnodes = 1
 inputfile = "/ccs/home/lsawade/events/gcmt3d/input.yml"
 
 [root.specfem]
-mpi = 24
+mpis = 24
 gpus = 0.25

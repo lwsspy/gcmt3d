@@ -4,6 +4,7 @@
 #BSUB -nnodes 4
 #BSUB -o inversion.%J.o
 #BSUB -e inversion.%J.e
+#BSUB -P GEO111
 
 # Get modules for specfem
 module purge
