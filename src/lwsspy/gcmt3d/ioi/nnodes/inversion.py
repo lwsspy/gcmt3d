@@ -59,7 +59,7 @@ def iteration(node: Node):
 
         # Create the inversion directory/makesure all things are in place
         node.add_mpi(
-            wcreate_forward_dirs, 1, (1, 0), arg=(node.event, node.inputfile),
+            wcreate_forward_dirs, 1, (4, 0), arg=(node.event, node.inputfile),
             name=f"mpi-create-dir-{node.eventname}",
             cwd=node.log)
 
@@ -119,7 +119,7 @@ def forward_frechet(node):
 def forward(node):
     # setup
     update_cmt_synt(node.outdir)
-    node.add_mpi('bin/xspecfem3D', node.specfem['mpi'], (1, node.specfem['gpu']),
+    node.add_mpi('bin/xspecfem3D', node.specfem['mpis'], (1, node.specfem['gpus']),
                  cwd=os.path.join(node.outdir, 'simu', 'synt'))
 
 
@@ -131,7 +131,7 @@ def frechet(node):
     # Process the frechet derivatives
     simpars = get_simpars(node.outdir)
     for _i in simpars:
-        node.add_mpi('bin/xspecfem3D', node.specfem['mpi'], (1, node.specfem['gpu']),
+        node.add_mpi('bin/xspecfem3D', node.specfem['mpis'], (1, node.specfem['gpus']),
                      cwd=os.path.join(node.outdir, 'simu', 'dsdm', f'dsdm{_i:05d}'))
 
 
