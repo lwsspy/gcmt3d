@@ -124,7 +124,7 @@ def forward_frechet(node):
 def forward(node):
     # setup
     update_cmt_synt(node.outdir)
-    node.add_mpi('bin/xspecfem3D', 6, (1, 1),
+    node.add_mpi('bin/xspecfem3D', node.specfem['mpi'], (1, node.specfem['gpu']),
                  cwd=os.path.join(node.outdir, 'simu', 'synt'))
 
 
@@ -136,7 +136,7 @@ def frechet(node):
     # Process the frechet derivatives
     simpars = get_simpars(node.outdir)
     for _i in simpars:
-        node.add_mpi('bin/xspecfem3D', 6, (1, 1),
+        node.add_mpi('bin/xspecfem3D', node.specfem['mpi'], (1, node.specfem['gpu']),
                      cwd=os.path.join(node.outdir, 'simu', 'dsdm', f'dsdm{_i:05d}'))
 
 
