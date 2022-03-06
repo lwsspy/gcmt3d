@@ -18,7 +18,7 @@ def main(node: Node):
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
         out = downloaddir(node.inputfile, event, get_dirs_only=True)
         outdir = out[0]
-        node.add(download, concurrent=True,
+        node.add(download, concurrent=True, name=eventname + "-Download",
                  outdir=outdir, event=event, eventname=eventname,
                  log='./logs/' + eventname)
 # -----------------------------------------------------------------------------
@@ -31,5 +31,6 @@ def download(node: Node):
     _ = downloaddir(node.inputfile, node.event)
 
     # Download data
-    get_data(node.outdir)
+    node.add_mpi(get_data, 1, (4, 0), arg=(node.outdir))
+
 
