@@ -1,3 +1,4 @@
+import asyncio
 from nnodes import Node
 from pprint import pprint
 from lwsspy.seismo.source import CMTSource
@@ -46,5 +47,6 @@ def main(node: Node):
 def download(node: Node):
 
     # Create base dir
-    node.add(f'gcmt3d-get-data {node.event} {node.inputfile}',
-             name=f"{node.eventname}-Download")
+    asyncio.create_subprocess_shell(
+        f'gcmt3d-get-data {node.event} {node.inputfile}')
+        
