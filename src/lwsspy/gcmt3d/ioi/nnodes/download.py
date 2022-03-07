@@ -19,7 +19,7 @@ def main(node: Node):
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
         out = downloaddir(node.inputfile, event, get_dirs_only=True)
         outdir = out[0]
-        node.add(download, concurrent=False, name=eventname + "-Download",
+        node.add(download, concurrent=True, name=eventname + "-Download",
                  outdir=outdir, event=event, eventname=eventname,
                  log='./logs/' + eventname)
 
@@ -27,7 +27,7 @@ def main(node: Node):
             if (node.max_downloads - 1) == _i:
                 break
 
- 
+
 def download(node: Node):
 
     # Create base dir
