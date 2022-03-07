@@ -35,13 +35,14 @@ def download(node: Node):
 
     # Create base dir
     node.add_mpi(
-        partial(downloaddir, node.inputfile, node.event), 1, (4, 0),
+        partial(downloaddir, node.inputfile, node.event), 1, (1, 0),
         cwd=node.log,
-        name=f"mpi-get-data-{node.eventname}")
+        name=f"mpi-make-downdir-{node.eventname}")
 
     # Download data
     node.add_mpi(
-        get_data, 1, (4, 0), arg=(node.outdir), cwd=node.log,
+        partial(get_data, node.inputfile, node.event), 1, (1, 0), 
+        cwd=node.log,
         name=f"mpi-get-data-{node.eventname}")
 
 
