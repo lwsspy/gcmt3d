@@ -160,7 +160,6 @@ def process_synthetics(node):
                      arg=(node.outdir, _i),
                      name=node.eventname + f'_process_dsdm{_i:05d}')
 
-
 # ------------------
 # Updating the model
 
@@ -243,6 +242,8 @@ def iteration_check(node):
         pass
 
     elif flag == "SUCCESS":
+        update_iter(node.outdir)
+        reset_step(node.outdir)
         if check_done(node.outdir) is False:
             update_iter(node.outdir)
             reset_step(node.outdir)
