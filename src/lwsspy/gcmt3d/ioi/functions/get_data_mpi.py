@@ -4,6 +4,7 @@ from .get_data import get_data
 from lwsspy.utils.io import read_yaml_file
 import typing as tp
 
+
 def split(container, count) -> tp.List[list]:
     """
     Simple function splitting a container into equal length chunks.
