@@ -12,6 +12,7 @@ from sys import exit, argv
 from ..functions.get_data_mpi import get_data_mpi
 from ..functions.events import check_events_todownload
 
+
 def bin():
     """
 
@@ -42,7 +43,7 @@ def bin():
         if len(argv) == 3:
             max_downloads = int(argv[2])
         else:
-            max_downloads = 1e6
+            max_downloads = int(1e6)
 
     if rank == 0:
         # Get files to dowload
@@ -50,24 +51,26 @@ def bin():
 
         # Number of events to download
         ND = len(eventfiles)
-        if size > ND:
-            errorflag = True
-        else:
-            errorflag = False
+
+        # # If the number of events is smaller than the number of available 
+        # # workers. Stop
+        # if size > ND:
+        #     errorflag = True
+        # else:
+        #     errorflag = False
     else:
         eventfiles = None
-        errorflag = False
+        # errorflag = False
 
-    # Broadcast process dictionary
-    errorflag = comm.bcast(errorflag, root=0)
+    # # Broadcast the error flag to all workers to stop
+    # errorflag = comm.bcast(errorflag, root=0)
 
-    if errorflag:
-        if rank == 0:
-            raise ValueError(f'You asked for {size} workers to download {ND} events...')
-        else:
-            exit()
-        
+    # # On worker 0 raise Error, exit on the rest.
+    # if errorflag:
+    #     if rank == 0:
+    #         raise ValueError(f'You asked for {size} workers to download {ND} events...')
+    #     else:
+    #         exit()
+
     # Feed into function
     get_data_mpi((eventfiles, inputfile))
-    
-    
