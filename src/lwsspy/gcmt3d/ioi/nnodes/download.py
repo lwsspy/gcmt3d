@@ -1,3 +1,4 @@
+from typing import Iterable, Sequence
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.utils import downloaddir
@@ -5,13 +6,37 @@ from lwsspy.gcmt3d.ioi.functions.get_data_mpi import get_data_mpi
 from lwsspy.gcmt3d.ioi.functions.events import check_events_todownload
 
 
-def split(container, count):
+def split(sequence: Sequence, count: int):
     """
     Simple function splitting a container into equal length chunks.
     Order is not preserved but this is potentially an advantage depending on
     the use case.
+
+    sequence = sequence to be split    
+    count = number of chunks to split the sequence into
+
+    return list of count chunks where the number of elements per chunk depends
+    on the length of the sequence
     """
-    return [container[_i::count] for _i in range(count)]
+    return [sequence[_i::count] for _i in range(count)]
+
+
+def chunkfunc(sequence: Sequence, n: int):
+    """
+    Converse to split, this function preserves the order of the events. But,
+    the last chunk has potentially only a single element. For the case, of 
+    I/O this is not so bad, but if you are looking for performance, `split()`
+    above is the better option.
+
+    sequence = sequence to be split    
+    n = number of elements per chunk
+
+    return list of n-element chunks where the number of chunks depends on the 
+    length of the sequence
+    """
+    n = max(1, n)
+    return [sequence[i:i+n] for i in range(0, len(sequence), n)]
+
 
 # ----------------------------- MAIN NODE -------------------------------------
 # Loops over events: TODOWNLOAD event check
@@ -29,15 +54,14 @@ def main(node: Node):
 
     # Node download MPI or not
     if node.download_mpi == 0:
-        
-        # Find number of chunks by 
-        Nchunks = round(len(eventfiles)/int(node.events_per_chunk))
 
-        eventfile_chunks = split(eventfiles, Nchunks)
+        # Find number of chunks by
+        # Nchunks = round(len(eventfiles)/int(node.events_per_chunk))
+        eventfile_chunks = chunkfunc(eventfiles, node.events_per_chunk)
 
         for chunk in eventfile_chunks:
             node.add(download_chunks, concurrent=True, eventfiles=chunk)
-        
+
 
     else:
 
