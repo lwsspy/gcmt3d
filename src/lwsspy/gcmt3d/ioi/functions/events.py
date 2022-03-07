@@ -117,6 +117,10 @@ def check_events(inputfile, reset=False):
 
     This function is integral to the workflow since it marks which events have 
     to be run and which dont.
+
+    The reset flag, resets FAILED download jobs! If download job did not fail,
+    it resets FAILED inversions. This has to be modified to allow for 
+    either or.
     """
 
     # Read input params
@@ -178,14 +182,18 @@ def check_events(inputfile, reset=False):
             # Then remove set download flag to fail and tell status that
             # we can't invert
             if 'FAILED' in downstat:
-                write_event_status(downdir, cmtname, 'FAIL')
-                write_event_status(statdir, cmtname, 'CANT')
+                if reset:
+                    write_event_status(downdir, cmtname, 'NEEDS_DOWNLOADING')
+                    write_event_status(statdir, cmtname, 'CANT')
+                else:
+                    write_event_status(downdir, cmtname, 'FAIL')
+                    write_event_status(statdir, cmtname, 'CANT')
                 continue
 
             # If the download is unfinished set flag to unfinished
             # and inversion flag to cant
             elif (downstat == 'DOWNLOADING'):
-                write_event_status(downdir, cmtname, 'UNFINISHED')
+                write_event_status(downdir, cmtname, 'NEEDS_DOWNLOADING')
                 write_event_status(statdir, cmtname, 'CANT')
                 continue
                 
