@@ -52,7 +52,7 @@ def bin():
 
         # Check filename for iteration and linesearch number
         if lsflag:
-            print(f"Iter/Step: {it:0>5}/{ls:0>5} -> Model: {load(filename):f}")
+            print(f"Iter/Step: {it:0>5}/{ls:0>5} -> Model: {array2string(load(filename), max_line_width=1e10)}")
         else:
             if ls == 0:
                 print(f"Iter: {it:0>5} -> Model: {array2string(load(filename), max_line_width=1e10)}")
