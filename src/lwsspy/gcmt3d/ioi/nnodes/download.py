@@ -44,5 +44,5 @@ def main(node: Node):
 def download(node: Node):
 
     # Create base dir
-    node.add(f'srun -n1 --exclusive gcmt3d-get-data {node.event} {node.inputfile}',
+    node.add(f'gcmt3d-get-data {node.event} {node.inputfile}',
              name=f"{node.eventname}-Download")

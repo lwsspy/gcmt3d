@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import logging
 from distutils.dir_util import copy_tree
 from lwsspy.utils.io import read_yaml_file
 from lwsspy.seismo.source import CMTSource
@@ -54,10 +55,11 @@ def get_data(outdir: str):
     # WRITESTATUS
     write_status(outdir, "DOWNLOADING")
 
+    # Redirect logger to file
     download_waveforms_to_storage(
         outdir, starttime=starttime, endtime=endtime,
         waveform_storage=waveformdir, station_storage=stationdir,
-        **download_dict)
+        logfile=os.path.join(outdir, 'download-log.txt'), **download_dict)
 
     # Check whether download can be called successful
     if (len(os.listdir(waveformdir)) <= 30) \
