@@ -1,11 +1,11 @@
 from nnodes import Node
-
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.utils import downloaddir
 from lwsspy.gcmt3d.ioi.functions.get_data_mpi import get_data_mpi
 from lwsspy.gcmt3d.ioi.functions.events import check_events_todownload
 
-def split(container, count) -> tp.List[list]:
+
+def split(container, count):
     """
     Simple function splitting a container into equal length chunks.
     Order is not preserved but this is potentially an advantage depending on
