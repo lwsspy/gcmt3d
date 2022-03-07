@@ -1,7 +1,7 @@
 [job]
 system = ["nnodes.job", "Summit"]
 name = "cmtinversion"
-nnodes = 4
+nnodes = 8
 account = "GEO111"
 walltime = 60.0
 gap = 2.0
