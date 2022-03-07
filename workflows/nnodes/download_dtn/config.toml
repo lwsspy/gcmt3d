@@ -14,3 +14,4 @@ task_nnodes = 1
 inputfile = "/ccs/home/lsawade/events/download/input.yml"
 max_downloads = 100
 download_mpi = 0
+events_per_chunk = 500
