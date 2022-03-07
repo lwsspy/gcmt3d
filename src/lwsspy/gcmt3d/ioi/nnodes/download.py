@@ -1,4 +1,5 @@
 from nnodes import Node
+from functools import partial
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import get_data
 from lwsspy.gcmt3d.ioi.functions.utils import downloaddir
@@ -9,14 +10,7 @@ from lwsspy.gcmt3d.ioi.functions.events import check_events_todownload
 # Loops over events: TODOWNLOAD event check
 def main(node: Node):
 
-    node.add(download, concurrent=True)
-
-# -----------------------------------------------------------------------------
-
-
-# ---------------------------- DATA DOWNLOAD ---------------------------------- 
-
-def download(node: Node):
+    node.concurrent = True
 
     maxflag = True if node.max_downloads != 0 else False
 
@@ -25,7 +19,7 @@ def download(node: Node):
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
         out = downloaddir(node.inputfile, event, get_dirs_only=True)
         outdir = out[0]
-        node.add(download, name=eventname + "-Download",
+        node.add(download, concurrent=False, name=eventname + "-Download",
                  outdir=outdir, event=event, eventname=eventname,
                  log='./logs/' + eventname)
 
@@ -33,11 +27,17 @@ def download(node: Node):
             if (node.max_downloads - 1) == _i:
                 break
 
+# -----------------------------------------------------------------------------
 
-def download_event(node: Node):
+
+# ---------------------------- DATA DOWNLOAD ---------------------------------- 
+def download(node: Node):
 
     # Create base dir
-    _ = downloaddir(node.inputfile, node.event)
+    node.add_mpi(
+        partial(downloaddir, node.inputfile, node.event), 1, (4, 0),
+        cwd=node.log,
+        name=f"mpi-get-data-{node.eventname}")
 
     # Download data
     node.add_mpi(
