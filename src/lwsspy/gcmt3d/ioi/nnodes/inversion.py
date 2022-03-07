@@ -247,8 +247,6 @@ def iteration_check(node):
         update_iter(node.outdir)
         reset_step(node.outdir)
         if check_done(node.outdir) is False:
-            update_iter(node.outdir)
-            reset_step(node.outdir)
             node.parent.parent.add(iteration)
 
 
