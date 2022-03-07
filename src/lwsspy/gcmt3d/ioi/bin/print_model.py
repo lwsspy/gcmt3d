@@ -55,4 +55,4 @@ def bin():
             print(f"Iter/Step: {it:0>5}/{ls:0>5} -> Model: {load(filename):f}")
         else:
             if ls == 0:
-                print(f"Iter: {it:0>5} -> Model: {array2string(load(filename), max_line_width=1e10):f}")
+                print(f"Iter: {it:0>5} -> Model: {array2string(load(filename), max_line_width=1e10)}")
