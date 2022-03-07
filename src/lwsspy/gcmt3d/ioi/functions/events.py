@@ -1,5 +1,6 @@
 
 import os
+from lwsspy.gcmt3d.ioi.nnodes.download import download
 from lwsspy.seismo.source import CMTSource
 from lwsspy.seismo.cmt_catalog import CMTCatalog
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
@@ -312,12 +313,27 @@ def check_events_todownload(inputfile):
     event_status_dir = inputparams["event_status"]
 
     # Get all directories that have events for downloading
+    eventstatusdirs = os.listdir(event_status_dir)
+
+    # Check if download dir is in the list and put it last to prioritize 
+    # inversion directories for download to do
+    if 'download' in eventstatusdirs:
+        eventstatusdirs.append(
+            eventstatusdirs.pop(
+                eventstatusdirs.index('download')
+            ))
+
+    # Get full path
     eventstatusdirs = [
-        os.path.join(event_status_dir, i) for i in os.listdir(event_status_dir)]
+        os.path.join(event_status_dir, i) for i in eventstatusdirs
+        ]
+
+    # Where to look for downloadable events
+    print(eventstatusdirs)
 
     # Make list of events to be downloaded
     TODOWNLOAD = []
-    
+
     for _eventstatusdir in eventstatusdirs:
 
         # Path to event directory
@@ -325,7 +341,7 @@ def check_events_todownload(inputfile):
 
         # Downloaded status
         downdir = os.path.join(_eventstatusdir, "DOWNLOADED")
-        
+
         # Get list of eventfile
         eventfilelist = [
             os.path.join(eventdir, i) for i in os.listdir(eventdir)]
@@ -358,6 +374,5 @@ def check_events_todownload(inputfile):
             uniquelist.append(os.path.basename(_td))
             unique_idx.append(_i)
             TODOWNLOAD_FILTERED.append(_td)
-
 
     return TODOWNLOAD_FILTERED
