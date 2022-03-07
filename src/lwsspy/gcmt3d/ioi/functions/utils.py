@@ -313,8 +313,28 @@ def prepare_model(outdir):
 
 def prepare_stations(outdir):
 
+    # Get dir
+    metadir = os.path.join(outdir, 'meta')
+
+    # Get CMT
+    cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
+        metadir, 'init_model.cmt'
+    ))
+
+    # Eventname
+    eventname = cmtsource.eventname
+
+    # Get parameters
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # Get data database
+    datadatabase = inputparams["datadatabase"]
+
+    # Get datadir in data database
+    stationsdir = os.path.join(datadatabase, eventname, 'stations')
+
     # Read inventory from the station directory and put into a single stations.xml
-    inv = read_inventory(os.path.join(outdir, 'meta', 'stations', '*.xml'))
+    inv = read_inventory(os.path.join(stationsdir, '*.xml'))
 
     # Write inventory to a single station directory
     inv.write(os.path.join(outdir, 'meta', 'stations.xml'), format='STATIONXML')

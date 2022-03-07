@@ -27,22 +27,9 @@ def main(node: Node):
             if (node.max_downloads - 1) == _i:
                 break
 
-# -----------------------------------------------------------------------------
-
-
-# ---------------------------- DATA DOWNLOAD ---------------------------------- 
+ 
 def download(node: Node):
 
     # Create base dir
-    node.add_mpi(
-        partial(downloaddir, node.inputfile, node.event), 1, (1, 0),
-        cwd=node.log,
-        name=f"mpi-make-downdir-{node.eventname}")
-
-    # Download data
-    node.add_mpi(
-        partial(get_data, node.outdir), 1, (1, 0),
-        cwd=node.log,
-        name=f"mpi-get-data-{node.eventname}")
-
-
+    node.add(f'gcmt3d-get-data {node.event} {node.inputfile}',
+             name=f"{node.eventname}-Download")

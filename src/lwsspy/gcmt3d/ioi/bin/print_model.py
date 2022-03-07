@@ -7,9 +7,10 @@
 
 """
 
-from sys import argv
+from sys import argv, exit
 from os import path, listdir
 from numpy import load, array2string
+
 
 def bin():
     """
@@ -27,7 +28,6 @@ def bin():
     
 
     """
-
 
     # Get args or print usage statement
     if (len(argv) < 2) or (len(argv) > 3) or (argv[1] == '-h') or (argv[1] == '--help'):

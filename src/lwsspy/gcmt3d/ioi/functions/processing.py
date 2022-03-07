@@ -20,15 +20,19 @@ from .forward import write_synt, read_synt
 from .data import write_data, read_data, write_data_windowed
 from .log import get_iter, get_step
 
+
 def process_data(outdir):
 
+    # Get dir
     metadir = os.path.join(outdir, 'meta')
-    datadir = os.path.join(outdir, 'data')
 
     # Get CMT
     cmtsource = CMTSource.from_CMTSOLUTION_file(os.path.join(
         metadir, 'init_model.cmt'
     ))
+
+    # Eventname
+    eventname = cmtsource.eventname
 
     # Get processing parameters
     processdict = read_yaml_file(os.path.join(outdir, 'process.yml'))
@@ -36,11 +40,17 @@ def process_data(outdir):
     # Get parameters
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
+    # Get data database
+    datadatabase = inputparams["datadatabase"]
+
+    # Get datadir in data database
+    ddatadir = os.path.join(datadatabase, eventname, 'waveforms', '*.mseed')
+
     # Read number of processes from input params
     multiprocesses = inputparams['multiprocesses']
 
     # Read data
-    data = read(os.path.join(datadir, 'waveforms', '*.mseed'))
+    data = read(os.path.join(ddatadir, 'waveforms', '*.mseed'))
 
     # Read metadata
     stations = read_inventory(os.path.join(metadir, 'stations.xml'))

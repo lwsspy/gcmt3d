@@ -7,9 +7,10 @@
 
 """
 
-from sys import argv
+from sys import argv, exit
 from os import path, listdir
 from numpy import load
+
 
 def bin():
     """
