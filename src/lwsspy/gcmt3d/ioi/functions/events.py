@@ -1,7 +1,5 @@
 
 import os
-from lwsspy.gcmt3d.ioi.nnodes.download import download
-from lwsspy.seismo.source import CMTSource
 from lwsspy.seismo.cmt_catalog import CMTCatalog
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from .utils import createdir
