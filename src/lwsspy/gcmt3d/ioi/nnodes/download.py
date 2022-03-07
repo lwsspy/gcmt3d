@@ -1,4 +1,3 @@
-from matplotlib.pyplot import get_figlabels
 from nnodes import Node
 
 from lwsspy.seismo.source import CMTSource
