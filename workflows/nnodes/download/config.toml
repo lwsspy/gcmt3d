@@ -6,8 +6,11 @@ account = "GEO111"
 walltime = 120.0
 gap = 2.0
 debug = true
+node_splittable = true
 
 [root]
 task = ["lwsspy.gcmt3d.ioi.nnodes.download", "main"]
 task_nnodes = 1
 inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
+max_downloads = 32
+download_mpi = 0

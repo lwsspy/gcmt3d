@@ -39,10 +39,9 @@ def main(node: Node):
             get_data_mpi, node.download_mpi, (1, 0),
             arg=(eventfiles, node.inputfile),
             name=f"Download-{len(eventfiles)}-events-on-{node.download_mpi}-cores")
-        
 
-def download(node: Node):
+async def download(node: Node):
 
     # Create base dir
-    node.add(f'gcmt3d-get-data {node.event} {node.inputfile}',
-             name=f"{node.eventname}-Download")
+    await node.call_async(f'gcmt3d-get-data {node.event} {node.inputfile}')
+
