@@ -12,5 +12,5 @@ node_splittable = true
 task = ["lwsspy.gcmt3d.ioi.nnodes.download", "main"]
 task_nnodes = 1
 inputfile = "/ccs/home/lsawade/events/download/input.yml"
-max_downloads = 32
+max_downloads = 100
 download_mpi = 0
