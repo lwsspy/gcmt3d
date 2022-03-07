@@ -232,6 +232,7 @@ def compute_descent(node):
 def compute_optvals(node):
     get_optvals(node.outdir)
 
+
 # ----------------
 # Inversion checks
 
@@ -244,10 +245,13 @@ def iteration_check(node):
         pass
 
     elif flag == "SUCCESS":
-        update_iter(node.outdir)
-        reset_step(node.outdir)
         if check_done(node.outdir) is False:
+            update_iter(node.outdir)
+            reset_step(node.outdir)
             node.parent.parent.add(iteration)
+        else:
+            update_iter(node.outdir)
+            reset_step(node.outdir)
 
 
 def search_check(node):
