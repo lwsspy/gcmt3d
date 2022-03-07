@@ -30,7 +30,7 @@ def main(node: Node):
     # Node download MPI or not
     if node.download_mpi == 0:
         
-        eventfile_chunks = split(eventfiles, node.events_per_chunk):
+        eventfile_chunks = split(eventfiles, node.events_per_chunk)
 
         for chunk in eventfile_chunks:
             node.add(download_chunks, concurrent=True, eventfiles=chunk)
