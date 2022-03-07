@@ -40,7 +40,7 @@ def bin():
         inputfile = argv[1]
 
         if len(argv) == 3:
-            max_downloads = argv[2]
+            max_downloads = int(argv[2])
         else:
             max_downloads = 1e6
 
