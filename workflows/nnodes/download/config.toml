@@ -14,3 +14,4 @@ task_nnodes = 1
 inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
 max_downloads = 32
 download_mpi = 0
+events_per_chunk = 500
