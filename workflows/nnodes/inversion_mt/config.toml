@@ -11,3 +11,7 @@ debug = true
 task = ["lwsspy.gcmt3d.ioi.nnodes.inversion", "main"]
 task_nnodes = 1
 inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
+
+[root.specfem]
+mpi = 6
+gpus = 1
