@@ -36,7 +36,7 @@ def bin():
             print(bin.__doc__)
         exit()
     else:
-    
+
         inputfile = argv[1]
 
         if len(argv) == 3:
@@ -47,14 +47,14 @@ def bin():
     if rank == 0:
         # Get files to dowload
         eventfiles = check_events_todownload(inputfile)[:max_downloads]
-        
+
         # Number of events to download
         ND = len(eventfiles)
         if size > ND:
             errorflag = True
-        else: 
+        else:
             errorflag = False
-    else: 
+    else:
         eventfiles = None
         errorflag = False
 
