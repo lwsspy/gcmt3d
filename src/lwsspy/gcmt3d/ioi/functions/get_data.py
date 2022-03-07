@@ -1,10 +1,10 @@
 import os
 import numpy as np
-import logging
 from distutils.dir_util import copy_tree
 from lwsspy.utils.io import read_yaml_file
 from lwsspy.seismo.source import CMTSource
-from lwsspy.seismo.download_waveforms_to_storage import download_waveforms_to_storage
+from lwsspy.seismo.download_waveforms_to_storage import \
+    download_waveforms_to_storage
 
 from .constants import Constants
 from .log import write_status

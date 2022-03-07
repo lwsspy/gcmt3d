@@ -1,5 +1,5 @@
 from nnodes import Node
-
+from pprint import pprint
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.utils import downloaddir
 from lwsspy.gcmt3d.ioi.functions.get_data_mpi import get_data_mpi
@@ -9,6 +9,8 @@ from lwsspy.gcmt3d.ioi.functions.events import check_events_todownload
 # ----------------------------- MAIN NODE -------------------------------------
 # Loops over events: TODOWNLOAD event check
 def main(node: Node):
+
+    pprint(node.__dict__)
 
     node.concurrent = True
 
