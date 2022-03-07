@@ -9,7 +9,14 @@ from lwsspy.gcmt3d.ioi.functions.events import check_events_todownload
 # Loops over events: TODOWNLOAD event check
 def main(node: Node):
 
-    node.concurrent = True
+    node.add(download, concurrent=True)
+
+# -----------------------------------------------------------------------------
+
+
+# ---------------------------- DATA DOWNLOAD ---------------------------------- 
+
+def download(node: Node):
 
     maxflag = True if node.max_downloads != 0 else False
 
@@ -18,19 +25,16 @@ def main(node: Node):
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
         out = downloaddir(node.inputfile, event, get_dirs_only=True)
         outdir = out[0]
-        node.add(download, concurrent=True, name=eventname + "-Download",
+        node.add(download, name=eventname + "-Download",
                  outdir=outdir, event=event, eventname=eventname,
                  log='./logs/' + eventname)
 
         if maxflag:
             if (node.max_downloads - 1) == _i:
                 break
-        
-# -----------------------------------------------------------------------------
 
 
-# ---------------------------- DATA DOWNLOAD ---------------------------------- 
-def download(node: Node):
+def download_event(node: Node):
 
     # Create base dir
     _ = downloaddir(node.inputfile, node.event)
