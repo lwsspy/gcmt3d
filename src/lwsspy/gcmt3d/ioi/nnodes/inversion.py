@@ -140,7 +140,7 @@ def frechet(node):
 def process_all(node):
 
     node.add_mpi(process_data, 1, (10, 0), arg=(
-        node.outdir), name=node.eventname + '_process_data')
+        node.outdir), name=node.eventname + '_process_data', cwd=node.log)
     node.add(process_synthetics, concurrent=True)
 
 
@@ -150,7 +150,8 @@ def process_synthetics(node):
     # Process the normal synthetics
     node.add_mpi(process_synt, 1, (10, 0),
                  arg=(node.outdir),
-                 name=node.eventname + '_process_synt')
+                 name=node.eventname + '_process_synt',
+                 cwd=node.log)
 
     # Process the frechet derivatives
     NM = len(read_model_names(node.outdir))
@@ -158,7 +159,8 @@ def process_synthetics(node):
         print(node.outdir, 'simpar', _i)
         node.add_mpi(wprocess_dsdm, 1, (10, 0),
                      arg=(node.outdir, _i),
-                     name=node.eventname + f'_process_dsdm{_i:05d}')
+                     name=node.eventname + f'_process_dsdm{_i:05d}',
+                     cwd=node.log)
 
 # ------------------
 # Updating the model
