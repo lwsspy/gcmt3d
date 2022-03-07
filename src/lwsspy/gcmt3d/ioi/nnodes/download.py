@@ -32,4 +32,4 @@ def download(node: Node):
 
     # Create base dir
     node.add(f'gcmt3d-get-data {node.event} {node.inputfile}',
-             name=f"{node.eventname}-Download")
+             name=f"{node.eventname}-Download", concurrent=True)
