@@ -15,8 +15,8 @@ Last Update: April 2020
 import os
 import sys
 import pprint
-from lwsspy.gcmt3d import filter_scaling
-from lwsspy.gcmt3d import ProcessParams
+from lwsspy.gcmt3d.process_classifier import filter_scaling
+from lwsspy.gcmt3d.process_classifier import ProcessParams
 from numpy import testing as npt
 
 

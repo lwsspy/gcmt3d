@@ -1,4 +1,4 @@
-import doctest
+
 import os
 from lwsspy.seismo.source import CMTSource
 from lwsspy.seismo.cmt_catalog import CMTCatalog
@@ -105,7 +105,7 @@ def add_events(eventdir, inputfile):
             continue
         else:
             # Write CMT's to directory
-            cat.cmts2file(dst)
+            _cmt.write_CMTSOLUTION_file(dst)
 
     # Check events right after adding them
     check_events(inputfile)
