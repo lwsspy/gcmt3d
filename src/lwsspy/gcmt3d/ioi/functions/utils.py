@@ -55,8 +55,12 @@ def rmdir(cdir):
 
 def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
 
-    # Read inputfile
-    input_params = read_yaml_file(inputfile)
+    # MPI escape!
+    if isinstance(inputfile, dict):
+        input_params = inputfile
+    else:
+        # Read inputfile
+        input_params = read_yaml_file(inputfile)
 
     # Get database location
     databasedir = input_params["datadatabase"]
