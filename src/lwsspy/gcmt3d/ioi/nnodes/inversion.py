@@ -33,7 +33,7 @@ def main(node: Node):
         node.add(cmtinversion, concurrent=False, name=eventname,
                  outdir=outdir, inputfile=node.inputfile,
                  event=event, eventname=eventname,
-                 log='./logs/' + eventname)
+                 log=os.path.join(outdir, 'logs'))
 # -----------------------------------------------------------------------------
 
 
@@ -67,10 +67,10 @@ def iteration(node: Node):
         node.add(forward_frechet, concurrent=True)
 
         # Process the data and the synthetics
-        node.add(process_all, concurrent=True, name='processing-all', cwd='./logs')
+        node.add(process_all, concurrent=True, name='processing-all', cwd=node.log)
 
         # Windowing
-        node.add_mpi(window, 1, (10, 0), arg=(node.outdir), cwd='./logs')
+        node.add_mpi(window, 1, (10, 0), arg=(node.outdir), cwd=node.log)
 
         # Weighting
         node.add(compute_weights)
