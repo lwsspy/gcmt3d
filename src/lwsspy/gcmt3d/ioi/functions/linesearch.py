@@ -169,8 +169,12 @@ def linesearch(outdir):
         # Read current cost
         cost = read_cost(outdir, it, ls)
 
-        # Read old cost
-        cost_old = read_cost(outdir, it, ls-1)
+        # Read old cost 
+        # IMPORTANT HERE is that the iterations cost is checked!
+        # The previous linesearch may or may not be a lot higher than the 
+        # iteration's costs, and we would accept a cost that did not actually 
+        # decrease
+        cost_old = read_cost(outdir, it, 0)
 
         # Safeguard check for inf and nans...
         if np.isnan(cost) or np.isinf(cost):
