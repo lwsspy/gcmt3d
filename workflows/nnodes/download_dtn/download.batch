@@ -17,5 +17,4 @@ source /ccs/home/lsawade/dtn_miniconda3/etc/profile.d/conda.sh && conda activate
 cd /ccs/home/lsawade/lwsspy_dtn/lwsspy.gcmt3d/workflows/nnodes/download_dtn
 
 # Run nnodes
-nnrun
-
+srun -n 16 gcmt3d-get-data-mpi /ccs/home/lsawade/events/download/input.yml

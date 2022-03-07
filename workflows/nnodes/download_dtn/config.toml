@@ -1,14 +1,16 @@
 [job]
-system = ["nnodes.job", "Tiger"]
+system = ["nnodes.job", "DTN"]
 name = "download"
 nnodes = 1
 account = "GEO111"
 walltime = 120.0
-gap = 2.0
+gap = 5.0
 debug = true
 node_splittable = true
 
 [root]
 task = ["lwsspy.gcmt3d.ioi.nnodes.download", "main"]
 task_nnodes = 1
-inputfile = "/ccs/home/lsawade/input.yml"
+inputfile = "/ccs/home/lsawade/events/download/input.yml"
+max_downloads = 32
+download_mpi = 0
