@@ -84,7 +84,6 @@ def check_invertible(mnames):
                 f"Available parameters are {Constants.parameter_check_list}")
 
 
-
 def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
 
     # MPI escape!
