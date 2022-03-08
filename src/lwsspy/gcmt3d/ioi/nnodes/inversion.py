@@ -1,5 +1,6 @@
 # %%
 import os
+from attr import has
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import stage_data
@@ -25,6 +26,9 @@ def main(node: Node):
     node.concurrent = True
 
     events = check_events_todo(node.inputfile)
+
+    if has(node.max_events):
+        events = events[:int(node.max_events)]
 
     for event in events:
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname

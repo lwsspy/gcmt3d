@@ -53,6 +53,38 @@ def rmdir(cdir):
     """
     shutil.rmtree(cdir)
 
+
+def check_mt_inv(mnames):
+    """Given the model parameter names. This function checks whether 
+    the inversion is for a moment tensor."""
+
+    # If one moment tensor parameter is given all must be given.
+    if any([_par in mnames for _par in Constants.mt_params]):
+        checklist = [_par for _par in Constants.mt_params if _par in mnames]
+        if not all([_par in checklist for _par in Constants.mt_params]):
+            raise ValueError(
+                "If one moment tensor parameter is to be "
+                "inverted. All must be inverted.\n"
+                "Update your parameters.")
+        else:
+            moment_tensor_inv = True
+    else:
+        moment_tensor_inv = False
+
+    return moment_tensor_inv
+
+
+def check_invertible(mnames):
+    """Checks whether all parameter can be inverted for."""
+
+    for _par in mnames:
+        if _par not in Constants.parameter_check_list:
+            raise ValueError(
+                f"{_par} not supported at this point. \n"
+                f"Available parameters are {Constants.parameter_check_list}")
+
+
+
 def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
 
     # MPI escape!
@@ -176,25 +208,11 @@ def basiccheck(outdir: str):
     # Mnames
     mnames = read_model_names(outdir)
 
-    # Check Parameter dict for wrong parameters
-    for _par in mnames:
-        if _par not in Constants.parameter_check_list:
-            raise ValueError(
-                f"{_par} not supported at this point. \n"
-                f"Available parameters are {Constants.parameter_check_list}")
-
-    # If one moment tensor parameter is given all must be given.
-    if any([_par in mnames for _par in Constants.mt_params]):
-        checklist = [_par for _par in Constants.mt_params if _par in mnames]
-        if not all([_par in checklist for _par in Constants.mt_params]):
-            raise ValueError(
-                "If one moment tensor parameter is to be "
-                "inverted. All must be inverted.\n"
-                "Update your parameters.")
-        else:
-            moment_tensor_inv = True
-    else:
-        moment_tensor_inv = False
+    # Check Parameter dict for wrong parameters, raises error if not invertible
+    check_invertible(mnames)
+    
+    # Check whether inversion is a moment tensor inversion
+    moment_tensor_inv = check_mt_inv(mnames)
 
     # Check zero trace condition
     if zero_trace:
@@ -344,6 +362,18 @@ def prepare_model(outdir):
 
     # Get scaling
     scaling_vector = np.array([val['scale'] for _, val in parameters.items()])
+
+    # If moment tensor inversion, scale moment tensor elements with the scalar
+    # moment
+    if check_mt_inv(model_names):
+
+        # Get initial scalar moment
+        M0 = init_cmt.M0
+
+        # Update the parameters
+        for _i, _name in enumerate(model_names):
+            if _name in Constants.mt_params:
+                scaling_vector[_i] = M0
 
     # Write scaling vector
     write_scaling(scaling_vector, outdir)
