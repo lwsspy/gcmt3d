@@ -151,8 +151,8 @@ def check_done(outdir):
 
     # Get the scaled models
     scaling = read_scaling(outdir)
-    smodel = read_model(outdir, it, 0)/scaling
-    smodel_prev = read_model(outdir, it+1, 0)/scaling
+    smodel_prev = read_model(outdir, it, 0)/scaling
+    smodel = read_model(outdir, it+1, 0)/scaling
 
     # Read necessary vals
     # _, _, _, alpha, _, _, _ = read_optvals(outdir, it, ls)
