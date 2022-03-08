@@ -27,8 +27,8 @@ def main(node: Node):
 
     events = check_events_todo(node.inputfile)
     print(events)
-    if has(node.max_events):
-        print('max events')
+    if hasattr(node, 'max_events'):
+        print('max events:', node.max_events)
         events = events[:int(node.max_events)]
     print(events)
     for event in events:
