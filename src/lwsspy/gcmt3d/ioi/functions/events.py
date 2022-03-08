@@ -258,24 +258,27 @@ def check_events(inputfile, resetopt: tp.Optional[ResetOpt] = None):
             # If reset flag is set manually for a specific event
             elif "RESET" in inv_stat:
                 write_event_status(statdir, cmtname, 'TODO')
-            
-            # If linesearch failed don't add to todo list, unless we reset all 
+
+            # If linesearch failed don't add to todo list, unless we reset all
             # events
             elif "FAIL" in inv_stat:
                 if resetinv:
                     write_event_status(statdir, cmtname, 'TODO')
                 else:
                     write_event_status(statdir, cmtname, 'FAIL')
-            
+
             # We have certain flags that indicate that an inversion is still
             # running, in that case make the status running
             elif ("SUCCESS" in inv_stat) or ("ADDSTEP" in inv_stat):
-                write_event_status(statdir, cmtname, 'RUNNING')
+                if resetinv:
+                    write_event_status(statdir, cmtname, 'TODO')
+                else:
+                    write_event_status(statdir, cmtname, 'RUNNING')
 
             # If we flag isn't covered add to todo list
             else:
                 write_event_status(statdir, cmtname, 'TODO')
-        
+
         # Except the case that the status message doesn't exist and add to 
         # todo list
         except Exception:

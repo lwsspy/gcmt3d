@@ -20,7 +20,6 @@ Should be run after gcmt3d-create-event-dir
 """
 
 from sys import argv, exit
-from turtle import reset
 from ..functions.events import check_events
 
 
