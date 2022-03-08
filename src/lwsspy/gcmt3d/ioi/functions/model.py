@@ -58,7 +58,7 @@ def get_simpars(outdir):
     return idx
 
 
-def write_model(m, outdir,it, ls=None):
+def write_model(m, outdir, it, ls=None):
     """Takes in model vector, modldirectory, iteration and linesearch number
     and write model to modl directory.
 

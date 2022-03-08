@@ -94,4 +94,4 @@ def gradient(outdir):
     write_gradient(grad, outdir, it, ls)
 
     write_log(
-        outdir, f"      g: {np.array2string(grad, max_line_width=int(1e10))")
+        outdir, f"      g: {np.array2string(grad, max_line_width=int(1e10))}")

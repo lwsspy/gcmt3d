@@ -15,7 +15,7 @@ from .log import write_status, get_iter, get_step, write_log
 
 
 def constrain_model(outdir, m):
-    """Only constrains parameters if 
+    """Only constrains parameters if
     ``parameter_constraints`` is set in the input file"""
 
     # Get input parameters
@@ -47,7 +47,7 @@ def constrain_model(outdir, m):
 
             if m[idx] > _upp:
                 m[idx] = _upp
-        
+
     return m
 
 
