@@ -374,6 +374,8 @@ def prepare_model(outdir):
             if _name in Constants.mt_params:
                 scaling_vector[_i] = M0
 
+    print(type(M0))
+
     # Write scaling vector
     write_scaling(scaling_vector, outdir)
 
