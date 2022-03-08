@@ -164,6 +164,46 @@ def optimdir(inputfile, cmtfilename, get_dirs_only=False):
         dsdmdir, costdir, graddir, hessdir, descdir, optdir
 
 
+def basiccheck(outdir: str):
+    """Should be performed after created the inversion dictionary."""
+
+    # Get input params
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # Get Zerotrace flag
+    zero_trace = inputparams["zero_trace"]
+
+    # Mnames
+    mnames = read_model_names(outdir)
+
+    # Check Parameter dict for wrong parameters
+    for _par in mnames:
+        if _par not in Constants.parameter_check_list:
+            raise ValueError(
+                f"{_par} not supported at this point. \n"
+                f"Available parameters are {Constants.parameter_check_list}")
+
+    # If one moment tensor parameter is given all must be given.
+    if any([_par in mnames for _par in Constants.mt_params]):
+        checklist = [_par for _par in Constants.mt_params if _par in mnames]
+        if not all([_par in checklist for _par in Constants.mt_params]):
+            raise ValueError(
+                "If one moment tensor parameter is to be "
+                "inverted. All must be inverted.\n"
+                "Update your parameters.")
+        else:
+            moment_tensor_inv = True
+    else:
+        moment_tensor_inv = False
+
+    # Check zero trace condition
+    if zero_trace:
+        if moment_tensor_inv is False:
+            raise ValueError("Can only use Zero Trace condition "
+                             "if inverting for Moment Tensor.\n"
+                             "Update your parameters.")
+
+
 def adapt_processdict(cmtsource, processdict, duration):
     """This is a fairly important method because it implements the
         magnitude dependent processing scheme of the Global CMT project.
@@ -454,8 +494,9 @@ def create_forward_dirs(cmtfile, inputfile):
     # Prepare model
     prepare_model(outdir)
 
-    # Get data
-    stage_data(outdir)
+    # # Get data
+    # stage_data(outdir)
+    basiccheck(outdir)
 
     # Prep Stations
     prepare_stations(outdir)

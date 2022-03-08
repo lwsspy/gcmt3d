@@ -11,7 +11,7 @@ from .kernel import read_dsdm, write_dsdm
 from .gradient import read_gradient, write_gradient
 from .hessian import read_hessian, write_hessian
 from .linesearch import read_optvals
-from .log import write_status, get_iter, get_step
+from .log import write_status, get_iter, get_step, write_log
 
 
 def read_optparams(paramdir):
@@ -35,7 +35,8 @@ def update_model(outdir):
     # Write new model
     write_model(m_new, outdir, it, ls)
 
-    # print("      m: ", np.array2string(m_new, max_line_width=int(1e10)))
+    write_log(
+        outdir, f"      m: {np.array2string(m_new, max_line_width=int(1e10))}")
 
 
 def update_mcgh(outdir):
@@ -94,7 +95,7 @@ def check_done(outdir):
 
     # Get iter,step
     it = get_iter(outdir)
-    ls = get_step(outdir)
+    # ls = get_step(outdir)
     
     # Read input parameters and optimization characteristics
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))

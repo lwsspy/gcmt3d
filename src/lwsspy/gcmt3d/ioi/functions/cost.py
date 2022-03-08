@@ -72,4 +72,5 @@ def cost(outdir):
 
     write_cost(cost, outdir, it, ls)
 
-    print("      c: ", np.array2string(cost, max_line_width=int(1e10)))
+    write_log(
+        outdir, f"      c: {np.array2string(cost, max_line_width=int(1e10))}")

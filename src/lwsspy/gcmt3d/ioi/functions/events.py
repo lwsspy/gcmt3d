@@ -1,9 +1,12 @@
 
 import os
+import typing as tp
 from lwsspy.seismo.cmt_catalog import CMTCatalog
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from .utils import createdir
 from .log import read_status
+
+RESETFLAG = tp.Literal['both', 'inv', 'down']
 
 
 def write_event_status(dir, eventname, message):
@@ -110,7 +113,7 @@ def add_events(eventdir, inputfile):
     check_events(inputfile)
 
 
-def check_events(inputfile, reset=False):
+def check_events(inputfile, reset: tp.Optional[RESETFLAG] = None):
     """
     Can only be run after the create_event_status_dir. The inputfile
     should be the one in the Event status directory.
@@ -118,9 +121,10 @@ def check_events(inputfile, reset=False):
     This function is integral to the workflow since it marks which events have 
     to be run and which dont.
 
-    The reset flag, resets FAILED download jobs! If download job did not fail,
-    it resets FAILED inversions. This has to be modified to allow for 
-    either or.
+    Reset Flag only resets failed jobs. If you want to reset a job that has
+    passed. you need to do so at download/inversion directory level by
+    changing the content of ``STATUS.txt`` to ``FAIL`` and use the reset flag 
+    of this function, or set the content of ``STATUS.txt`` to ``RESET``.
     """
 
     # Read input params
@@ -141,6 +145,22 @@ def check_events(inputfile, reset=False):
         label = "new"
     else:
         label = f"{label}"
+
+    # Get reset flags
+    if reset is not None:
+        if reset == 'both':
+            resetdown = True
+            resetinv = True
+        elif reset == 'inv':
+            resetdown = False
+            resetinv = True
+        elif reset == 'down':
+            resetdown = True
+            resetinv = False
+    else:
+        resetdown = False
+        resetinv = False
+
 
     # Create event dir
     neweventdir = os.path.join(event_status_dir, label)
@@ -181,13 +201,18 @@ def check_events(inputfile, reset=False):
             # Download fails sometimes (or not enough data)
             # Then remove set download flag to fail and tell status that
             # we can't invert
-            if 'FAILED' in downstat:
-                if reset:
+            if 'FAILED' in downstat or 'FAIL' in downstat:
+                if resetdown:
                     write_event_status(downdir, cmtname, 'NEEDS_DOWNLOADING')
                     write_event_status(statdir, cmtname, 'CANT')
                 else:
                     write_event_status(downdir, cmtname, 'FAIL')
                     write_event_status(statdir, cmtname, 'CANT')
+                continue
+                
+            if 'RESET' in downstat:
+                write_event_status(downdir, cmtname, 'NEEDS_DOWNLOADING')
+                write_event_status(statdir, cmtname, 'CANT')
                 continue
 
             # If the download is unfinished set flag to unfinished
@@ -237,7 +262,7 @@ def check_events(inputfile, reset=False):
             # If linesearch failed don't add to todo list, unless we reset all 
             # events
             elif "FAIL" in inv_stat:
-                if reset:
+                if resetinv:
                     write_event_status(statdir, cmtname, 'TODO')
                 else:
                     write_event_status(statdir, cmtname, 'FAIL')

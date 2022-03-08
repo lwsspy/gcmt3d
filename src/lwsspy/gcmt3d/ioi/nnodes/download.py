@@ -81,8 +81,7 @@ def download_chunks(node: Node):
             outdir = out[0]
 
             node.add(download, concurrent=True, name=eventname + "-Download",
-                     outdir=outdir, event=event, eventname=eventname,
-                     cwd='./logs/' + eventname)
+                     outdir=outdir, event=event, eventname=eventname)
 
 async def download(node: Node):
 
