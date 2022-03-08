@@ -34,8 +34,8 @@ def zero_trace_gH(m, g, H, outdir):
     zero_trace_index_array = np.where(zero_trace_array == 1.)[0]
     zero_trace_array = np.append(zero_trace_array, 0.0)
 
-    m, n = H.shape
-    Hz = np.zeros((m+1, n+1))
+    k, l = H.shape
+    Hz = np.zeros((k+1, l+1))
     Hz[:-1, :-1] = H
     Hz[:, -1] = zero_trace_array
     Hz[-1, :] = zero_trace_array
