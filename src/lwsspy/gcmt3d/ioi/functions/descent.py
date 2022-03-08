@@ -13,10 +13,10 @@ def damp_gH(m, m0, g, H, damping):
     modelres = m - m0
 
     # Compute damping factor
-    factor = damping * np.trace(H) / g.size
+    factor = damping * np.trace(H) / m.size
 
     # Update the Hessian and the gradient
-    dH = H + factor * np.diag(np.ones(g.size))
+    dH = H + factor * np.diag(np.ones(m.size))
     dg = g + factor * modelres
 
     return dg, dH
@@ -109,16 +109,16 @@ def descent(outdir):
     g *= s
     H = np.diag(s) @ H @ np.diag(s)
 
+    # Add damping if wanted!
+    if damping > 0.0:
+        m0 = read_model(outdir, 0, 0)
+        g, H = damp_gH(m/s, m0/s, g, H, damping)   
+
     # Add zerotrace constraint if wanted
     if zero_trace:
         # Since we are acting on the scaled gradient and Hessian, the model
         # needs to be scaled as well.
         g, H = zero_trace_gH(m/s, g, H, outdir)
-
-    # Add damping if wanted!
-    if damping > 0.0:
-        m0 = read_model(outdir, 0, 0)
-        g, H = damp_gH(m/s, m0/s, g, H, damping)   
 
     # Get direction
     dm = np.linalg.solve(H, -g)
