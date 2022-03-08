@@ -123,6 +123,10 @@ def descent(outdir):
     # Get direction
     dm = np.linalg.solve(H, -g)
 
+    # If zero trace remove last index
+    if zero_trace:
+        dm = dm[:-1]
+
     # Write direction to file
     write_descent(dm*s, outdir, it, 0)
 
