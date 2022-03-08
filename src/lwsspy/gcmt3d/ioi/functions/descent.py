@@ -96,7 +96,7 @@ def descent(outdir):
     damping = inputparams['optimization']['damping']
 
     # Get zerotrace flag
-    zero_trace = inputparams['zero_trace']['damping']
+    zero_trace = inputparams['zero_trace']
 
     # Read model, gradient, hessian
     m = read_model(outdir, it, ls)
