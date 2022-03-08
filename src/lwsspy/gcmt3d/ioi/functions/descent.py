@@ -1,7 +1,6 @@
 import os
 import numpy as np
-from .constants import Constants
-from .model import read_model, read_model_names
+from .model import read_model, read_model_names, read_scaling
 from .gradient import read_gradient
 from .hessian import read_hessian
 from lwsspy.utils.io import read_yaml_file
@@ -104,7 +103,7 @@ def descent(outdir):
     H = read_hessian(outdir, it, ls)
 
     # Read scaling
-    s = np.load(os.path.join(metadir, 'scaling.npy'))
+    s = read_scaling(outdir)
 
     # Scaling of the gradient and the Hessian
     g *= s

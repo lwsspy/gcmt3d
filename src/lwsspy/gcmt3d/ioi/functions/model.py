@@ -27,7 +27,7 @@ def write_scaling(scaling, outdir):
 
 def read_scaling(outdir):
     metadir = os.path.join(outdir, 'meta')
-    return np.load(os.path.join(metadir, 'scaling.npy')).tolist()
+    return np.load(os.path.join(metadir, 'scaling.npy'))
 
 
 def write_model_names(model_names, outdir):

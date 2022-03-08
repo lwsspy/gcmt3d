@@ -42,6 +42,3 @@ def bin():
     else:
         print(__doc__)
         exit()
-        
-
-    

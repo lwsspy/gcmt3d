@@ -13,10 +13,9 @@ from lwsspy.seismo.specfem.createsimdir import createsimdir
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from lwsspy.gcmt3d.process_classifier import ProcessParams
 from .constants import Constants
-from .model import read_model_names, write_model, write_model_names, \
+from .model import read_model_names, read_scaling, write_model, write_model_names, \
     write_scaling, write_perturbation
 from .log import reset_iter, reset_step, write_status
-from .get_data import stage_data
 
 
 def write_pickle(filename, obj):
@@ -374,10 +373,12 @@ def prepare_model(outdir):
             if _name in Constants.mt_params:
                 scaling_vector[_i] = M0
 
-    print(type(M0))
-
     # Write scaling vector
-    write_scaling(scaling_vector, outdir)
+    write_scaling(scaling_vector.astype(float), outdir)
+
+    # Read scaling throws an error if the scaling vector is for some reason of
+    # type object
+    read_scaling(outdir)
 
     # Get perturbation
     perturb_vector = np.array([val['pert'] for _, val in parameters.items()])
