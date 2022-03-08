@@ -22,9 +22,11 @@ def constrain_model(outdir, m):
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
 
     # If no parameters should be constraint, return
-    if inputparams['parameter_constraints'] is None:
+    if hasattr(inputparams, 'parameter_constraints') is False:
         return m
-
+    elif inputparams['parameter_constraints'] is None:
+        return m
+        
     # Get lower and upper constraints
     lower = inputparams['parameter_constraints']['lower']
     upper = inputparams['parameter_constraints']['upper']
