@@ -47,7 +47,7 @@ def print_model_names(outdir):
     model_names = read_model_names(outdir)
 
     # Print model names
-    for _i, _name in model_names:
+    for _i, _name in enumerate(model_names):
         print(f"{_i:>5}: {_name}")
 
 
