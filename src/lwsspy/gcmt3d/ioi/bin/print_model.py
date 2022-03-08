@@ -19,13 +19,8 @@ def bin():
 
         gcmt3d-print-model eventdir [anything]
 
-    This script calls a python function that prints the costs. If any 
+    This script calls a python function that prints the models. If any 
     command line arguments are included the function includes the linesearches.
-
-    where path to 'event_status' and 'label' are found in the 'input.yml'.
-
-    After initialization.
-    
 
     """
 

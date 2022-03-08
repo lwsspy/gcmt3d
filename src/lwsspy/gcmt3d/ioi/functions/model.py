@@ -42,7 +42,13 @@ def read_model_names(outdir):
 
 
 def print_model_names(outdir):
-    print(read_model_names(outdir))
+
+    # Get model names
+    model_names = read_model_names(outdir)
+
+    # Print model names
+    for _i, _name in model_names:
+        print(f"{_i:>5}: {_name}")
 
 
 def get_simpars(outdir):

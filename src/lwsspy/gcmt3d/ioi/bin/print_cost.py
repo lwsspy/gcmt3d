@@ -22,11 +22,6 @@ def bin():
     This script calls a python function that prints the costs. If any 
     command line arguments are included the function includes the linesearches.
 
-    where path to 'event_status' and 'label' are found in the 'input.yml'.
-
-    After initialization.
-    
-
     """
 
 
