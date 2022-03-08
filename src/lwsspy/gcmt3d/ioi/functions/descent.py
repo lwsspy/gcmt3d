@@ -13,10 +13,10 @@ def damp_gH(m, m0, g, H, damping):
     modelres = m - m0
 
     # Compute damping factor
-    factor = damping * np.trace(H) / m.size
+    factor = damping * np.trace(H) / g.size
 
     # Update the Hessian and the gradient
-    dH = H + factor * np.diag(np.ones(m.size))
+    dH = H + factor * np.diag(np.ones(g.size))
     dg = g + factor * modelres
 
     return dg, dH
@@ -41,8 +41,6 @@ def zero_trace_gH(m, g, H, outdir):
     Hz[-1, :] = zero_trace_array
     H = Hz
     g = np.append(g, 0.0)
-    print(m)
-    print(g)
     g[-1] = np.sum(m[zero_trace_index_array])
 
     return g, H
