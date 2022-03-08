@@ -26,10 +26,11 @@ def main(node: Node):
     node.concurrent = True
 
     events = check_events_todo(node.inputfile)
-
+    print(events)
     if has(node.max_events):
+        print('max events')
         events = events[:int(node.max_events)]
-
+    print(events)
     for event in events:
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
         out = optimdir(node.inputfile, event, get_dirs_only=True)
