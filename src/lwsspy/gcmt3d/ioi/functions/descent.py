@@ -41,6 +41,8 @@ def zero_trace_gH(m, g, H, outdir):
     Hz[-1, :] = zero_trace_array
     H = Hz
     g = np.append(g, 0.0)
+    print(m)
+    print(g)
     g[-1] = np.sum(m[zero_trace_index_array])
 
     return g, H
