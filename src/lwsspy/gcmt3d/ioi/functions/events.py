@@ -6,7 +6,7 @@ from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from .utils import createdir
 from .log import read_status
 
-RESETFLAG = tp.Literal['both', 'inv', 'down']
+ResetOpt = tp.Literal["both", "inv", "down"]
 
 
 def write_event_status(dir, eventname, message):
@@ -113,7 +113,7 @@ def add_events(eventdir, inputfile):
     check_events(inputfile)
 
 
-def check_events(inputfile, reset: tp.Optional[RESETFLAG] = None):
+def check_events(inputfile, resetopt: tp.Optional[ResetOpt] = None):
     """
     Can only be run after the create_event_status_dir. The inputfile
     should be the one in the Event status directory.
@@ -147,14 +147,14 @@ def check_events(inputfile, reset: tp.Optional[RESETFLAG] = None):
         label = f"{label}"
 
     # Get reset flags
-    if reset is not None:
-        if reset == 'both':
+    if resetopt is not None:
+        if resetopt == 'both':
             resetdown = True
             resetinv = True
-        elif reset == 'inv':
+        elif resetopt == 'inv':
             resetdown = False
             resetinv = True
-        elif reset == 'down':
+        elif resetopt == 'down':
             resetdown = True
             resetinv = False
     else:
