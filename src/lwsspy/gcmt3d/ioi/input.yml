@@ -99,6 +99,9 @@ optimization:
   # Max linesearches
   nls_max: 4
 
+  # Factor by which to increase alpha
+  factor: 2
+
   # Stopping criterion relative cost lower than
   stopping_criterion: 1.0e-2
 
