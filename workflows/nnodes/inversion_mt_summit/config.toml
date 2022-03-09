@@ -1,10 +1,10 @@
 [job]
 system = ["nnodes.job", "Summit"]
 name = "cmtinversion"
-nnodes = 8
+nnodes = 10
 account = "GEO111"
 walltime = 60.0
-gap = 2.0
+gap = 5.0
 debug = true
 node_splittable = true
 
