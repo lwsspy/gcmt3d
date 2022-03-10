@@ -80,10 +80,13 @@ def compute_weights(outdir):
 
             # Get azimuthal weights for the traces of each component
             if len(latitudes) > 1 and len(longitudes) > 2:
-                azi_weights(
+                aw = azi_weights(
                     cmtsource.latitude,
                     cmtsource.longitude,
                     latitudes, longitudes, nbins=12, p=0.5)
+
+                # Normalize the azimuthal weights
+                aw /= np.sum(aw)/len(aw)
 
                 # Save azi weights into dict
                 weights[_wtype][_component]["azimuthal"] \
@@ -92,8 +95,10 @@ def compute_weights(outdir):
                 # Get Geographical weights
                 gw = GeoWeights(latitudes, longitudes)
                 _, _, ref, _ = gw.get_condition()
-                print(ref)
                 geo_weights = gw.get_weights(ref)
+
+                # Normalize the azimuthal weights
+                geo_weights /= np.sum(geo_weights)/len(geo_weights)
 
                 # Save geo weights into dict
                 weights[_wtype][_component]["geographical"] \
