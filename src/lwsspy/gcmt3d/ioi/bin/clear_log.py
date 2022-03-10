@@ -1,19 +1,17 @@
-
-from sys import exit, argv
-from ..opt import check_done, check_status, update_model, update_mcgh
-from ..log import clear_log
-
 """
 
  Executable that clears the log in a given log directory.
 
 Usage:
-    opt-clear-log <logdir>
+    ioi-clear-log optdir
 
 where:
     logdir   - directory containing the log(s)
     
 """
+
+from sys import exit, argv
+from ..functions.log import clear_log
 
 
 def bin_clear_log():
@@ -24,7 +22,7 @@ def bin_clear_log():
         exit()
 
     # Get log dir from command line arguments
-    logdir = argv[1]
+    optdirdir = argv[1]
 
     # Clearlog
-    clear_log(logdir)
+    clear_log(optdir)

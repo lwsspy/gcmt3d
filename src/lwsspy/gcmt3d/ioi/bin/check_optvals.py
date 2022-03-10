@@ -4,31 +4,36 @@ Exectuable that checks teh optimization parameters on whether further iteration
  or linesearch is necessary.
 
 Usage:
-    opt-check-optvals <optdir> <statdir> <costdir> <it> <ls> <nls_maxs>
+    ioi-check-optvals <optdir> <it> <ls>
                 
 where:
     optdir   - directory containing the optimization parameters
-    statdir  - directory containing the 'STATUS.txt'
-    costdir  - directory containing the costs
     it       - iteration number
     ls       - linesearch number
-    nls_max  - max number of linesearches
+
+
+
+:Author:
+    Lucas Sawade (lsawade-at-princeton.edu)
+
+:Last Modified:
+    2022.02.28 16.50
 
 """
 
 from sys import exit, argv
-from ..linesearch import check_optvals
+from ..functions.linesearch import check_optvals
 
 
 def bin():
 
-    if len(argv) != 6+1:
+    if len(argv) != 1+3:
         print("Note enough or too few input parameters.")
         print(__doc__)
         exit()
 
     # Get command line arguments
-    optdir, statdir, costdir, it, ls, nls_max = argv[1:7]
+    optdir, it, ls, nls_max = argv[1:4]
 
     # Clearlog
     check_optvals(optdir, statdir, costdir, it, ls, nls_max)

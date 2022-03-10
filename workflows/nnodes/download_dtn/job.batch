@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -t02:00:00
+#SBATCH -N 1
+#SBATCH -n 16
+#SBATCH --output=download_dtn.txt
+#SBATCH -A GEO111
+
+
+# For parallel computation
+# This makes sure that python doesn't try to use cores it's not supposed to
+export OMP_NUM_THREADS=1
+
+# Activate conda environment
+source /ccs/home/lsawade/dtn_miniconda3/etc/profile.d/conda.sh && conda activate lwsspy-dtn
+
+# Change directory to the 
+cd /ccs/home/lsawade/lwsspy_dtn/lwsspy.gcmt3d/workflows/nnodes/download_dtn
+
+# Run nnodes
+nnrun
+

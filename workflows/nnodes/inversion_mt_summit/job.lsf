@@ -1,0 +1,25 @@
+#!/bin/bash
+#BSUB -J inversion
+#BSUB -W 1:00
+#BSUB -nnodes 10
+#BSUB -o inversion.o
+#BSUB -e inversion.e
+#BSUB -P GEO111
+#BSUB -alloc_flags "gpumps"
+
+# For parallel python to understand to not look for other cores
+export OMP_NUM_THREADS=1
+
+# Get modules for specfem
+module purge
+module load gcc spectrum-mpi cuda cmake boost
+
+# Initialize Anaconda
+. "/ccs/home/lsawade/anaconda3_summit/etc/profile.d/conda.sh" && conda activate lwsspy
+
+# Change directory to workflow dir
+cd /ccs/home/lsawade/lwsspy_summit/lwsspy.gcmt3d/workflows/nnodes/inversion_mt_summit
+
+
+# Run nnodes workflow
+nnrun

@@ -1,0 +1,19 @@
+[job]
+system = ["nnodes.job", "Summit"]
+name = "cmtinversion"
+nnodes = 10
+account = "GEO111"
+walltime = 60.0
+gap = 5.0
+debug = true
+node_splittable = true
+
+[root]
+task = ["lwsspy.gcmt3d.ioi.nnodes.inversion", "main"]
+task_nnodes = 1
+inputfile = "/ccs/home/lsawade/events/gcmt3d/input.yml"
+max_events = 1
+
+[root.specfem]
+mpis = 24
+gpus = 0.25

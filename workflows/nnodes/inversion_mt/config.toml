@@ -1,0 +1,17 @@
+[job]
+system = ["nnodes.job", "Tiger"]
+name = "source"
+nnodes = 8
+account = "GEO111"
+walltime = 120.0
+gap = 2.0
+debug = true
+
+[root]
+task = ["lwsspy.gcmt3d.ioi.nnodes.inversion", "main"]
+task_nnodes = 1
+inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
+
+[root.specfem]
+mpi = 6
+gpus = 1

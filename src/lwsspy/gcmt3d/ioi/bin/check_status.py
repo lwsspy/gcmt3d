@@ -3,7 +3,7 @@
 Exectuable that checks the status of the inversion after linesearch.
 
 Usage:
-    opt-check-status <statusdir>
+    ioi-check-status <statusdir>
 
 where:
    statusdir  -  directory 'STATUS.txt' is written to
@@ -11,7 +11,7 @@ where:
 """
 
 from sys import exit, argv
-from ..opt import check_status
+from ..functions.opt import check_status
 
 
 def bin():
