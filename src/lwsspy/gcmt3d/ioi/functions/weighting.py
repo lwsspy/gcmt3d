@@ -94,7 +94,7 @@ def compute_weights(outdir):
 
                 # Get Geographical weights
                 gw = GeoWeights(latitudes, longitudes)
-                _, _, ref, _ = gw.get_condition()
+                _, _, ref, _ = gw.get_condition(ctype='fracmax', param=0.2)
                 geo_weights = gw.get_weights(ref)
 
                 # Normalize the azimuthal weights
