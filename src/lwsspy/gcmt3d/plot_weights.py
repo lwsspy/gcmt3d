@@ -30,7 +30,7 @@ def plot_single_weight_set(
         norm = lplt.MidPointLogNorm(vmin=vmin, vmax=vmax, midpoint=1.0)
         cmap = "RdBu_r"
 
-    if weights == 1:
+    if isinstance(weights, int):
         weights = np.ones_like(lat)
     
     plt.scatter(lon, lat, c=weights, cmap=cmap,
