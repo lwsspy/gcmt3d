@@ -26,7 +26,7 @@ def plot_single_weight_set(
         norm = Normalize(vmin=vmin, vmax=vmax)
         cmap = "rainbow"
     else:
-        norm = lpy.plot.MidpointLogNorm(vmin=vmin, vmax=vmax, midpoint=1.0)
+        norm = lpy.plot.MidPointLogNorm(vmin=vmin, vmax=vmax, midpoint=1.0)
         cmap = "RdBu_r"
 
     plt.scatter(lon, lat, c=weights, cmap=cmap,
