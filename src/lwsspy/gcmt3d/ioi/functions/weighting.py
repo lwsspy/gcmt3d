@@ -80,10 +80,11 @@ def compute_weights(outdir):
 
             # Get azimuthal weights for the traces of each component
             if len(latitudes) > 1 and len(longitudes) > 2:
-                aw = azi_weights(
-                    cmtsource.latitude,
-                    cmtsource.longitude,
-                    latitudes, longitudes, nbins=12, p=0.5)
+                aw = 1
+                # azi_weights(
+                #     cmtsource.latitude,
+                #     cmtsource.longitude,
+                #     latitudes, longitudes, nbins=12, p=0.5)
 
                 # Save azi weights into dict
                 weights[_wtype][_component]["azimuthal"] \
