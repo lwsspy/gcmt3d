@@ -57,10 +57,12 @@ def main(node: Node):
             idx = eventnames.index(_id)
             nevents.append(eventfiles[idx])
 
+        eventfiles = nevents
+
     # If max number of inversion select first X
     if maxflag:
         print('Getting max # of events ...')
-        eventfiles = eventfiles[:node.max_downloads]
+        eventfiles = eventfiles[:node.max_events]
 
     # print list of events if not longer than 10
     if len(eventfiles) < 11:
