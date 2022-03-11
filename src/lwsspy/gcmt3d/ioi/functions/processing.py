@@ -208,6 +208,9 @@ def process_dsdm(outdir, nm):
     # Read metadata
     stations = read_inventory(os.path.join(metadir, 'stations.xml'))
 
+    print(processdict)
+    print(processdict.keys())
+    
     # Process each wavetype.
     for _wtype in processdict.keys():
 
