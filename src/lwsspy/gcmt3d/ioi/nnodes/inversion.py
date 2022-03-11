@@ -26,16 +26,20 @@ def main(node: Node):
     node.concurrent = True
 
     # Events to be inverted
+    print('Checking events TODO ...')
     eventfiles = check_events_todo(node.inputfile)
 
     # Specific event id(s)
     eventflag = True if node.eventid is not None else False
+    print('Specfic event(s)?', eventflag)
 
     # Maximum download flag
     maxflag = True if node.max_events != 0 else False
+    print('Maximum # of events?', eventflag)
 
     # If eventid in files only use the ids
     if eventflag:
+        print('Getting specific events...')
         nevents = []
 
         eventnames = [
@@ -55,8 +59,13 @@ def main(node: Node):
 
     # If max number of inversion select first X
     if maxflag:
+        print('Getting max # of events ...')
         eventfiles = eventfiles[:node.max_downloads]
 
+    # print list of events if not longer than 10
+    if len(eventfiles) < 11:
+        for _ev in eventfiles:
+            print(_ev)
     
     # Loop over inversions
     for event in eventfiles:
