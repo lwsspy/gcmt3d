@@ -12,7 +12,7 @@ from os import environ
 # distribute work to the different cores manually. If this is not 
 # set, the different cores will fight for threads!!!!
 environ["OMP_NUM_THREADS"] = '1'
-environ["OMP_NUM_THREADS"] = '1;
+environ["OMP_NUM_THREADS"] = '1'
 
 from sys import argv, exit
 from ..functions.processing import process_synt
