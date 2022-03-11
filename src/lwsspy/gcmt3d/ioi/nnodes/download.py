@@ -73,8 +73,7 @@ def main(node: Node):
         for _id in eventids:
             idx = eventnames.index(_id)
             nevents.append(eventfiles[idx])
-
-        
+  
         eventfiles = nevents
 
     if maxflag:
