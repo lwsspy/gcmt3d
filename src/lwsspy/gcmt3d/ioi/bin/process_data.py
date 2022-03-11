@@ -27,7 +27,7 @@ def bin():
         print(bin.__doc__)
         exit()
     else:
-        outdir = argv[1:]
+        outdir = argv[1]
 
     # Run the initializer
     process_data(outdir)
