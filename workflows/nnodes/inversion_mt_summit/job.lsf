@@ -7,7 +7,6 @@
 #BSUB -q debug
 #BSUB -alloc_flags "gpumps"
 
-# For parallel python to understand to not look for other cores
 
 # Get modules for specfem
 module purge
