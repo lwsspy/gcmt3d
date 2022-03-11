@@ -55,14 +55,8 @@ def process_data(outdir):
     # Read metadata
     stations = read_inventory(os.path.join(metadir, 'stations.xml'))
 
-    print(processdict)
-    print(processdict.keys())
-    
     # Process each wavetype.
     for _wtype in processdict.keys():
-
-        print(_wtype)
-        print(processdict[_wtype]["process"]["relative_starttime"])
 
         sdata = deepcopy(data)
 
@@ -73,14 +67,14 @@ def process_data(outdir):
             + processdict[_wtype]["process"]["relative_endtime"]
 
         # Process dict
-        processdict = deepcopy(processdict[_wtype]["process"])
+        tprocessdict = deepcopy(processdict[_wtype]["process"])
 
-        processdict.pop("relative_starttime")
-        processdict.pop("relative_endtime")
-        processdict["starttime"] = starttime
-        processdict["endtime"] = endtime
-        processdict["inventory"] = stations
-        processdict.update(dict(
+        tprocessdict.pop("relative_starttime")
+        tprocessdict.pop("relative_endtime")
+        tprocessdict["starttime"] = starttime
+        tprocessdict["endtime"] = endtime
+        tprocessdict["inventory"] = stations
+        tprocessdict.update(dict(
             remove_response_flag=True,
             event_latitude=cmtsource.latitude,
             event_longitude=cmtsource.longitude,
@@ -91,10 +85,10 @@ def process_data(outdir):
         # Multiprocessing does not work in ipython hence we check first
         # we are in an ipython environment
         if multiprocesses <= 1 or isipython():
-            pdata = process_stream(sdata, **processdict)
+            pdata = process_stream(sdata, **tprocessdict)
         else:
             pdata = queue_multiprocess_stream(
-                sdata, processdict, nproc=multiprocesses)
+                sdata, tprocessdict, nproc=multiprocesses)
 
         print(f"writing data {_wtype} for {outdir}")
 
@@ -143,14 +137,14 @@ def process_synt(outdir):
             + processdict[_wtype]["process"]["relative_endtime"]
 
         # Process dict
-        processdict = deepcopy(processdict[_wtype]["process"])
+        tprocessdict = deepcopy(processdict[_wtype]["process"])
 
-        processdict.pop("relative_starttime")
-        processdict.pop("relative_endtime")
-        processdict["starttime"] = starttime
-        processdict["endtime"] = endtime
-        processdict["inventory"] = stations
-        processdict.update(dict(
+        tprocessdict.pop("relative_starttime")
+        tprocessdict.pop("relative_endtime")
+        tprocessdict["starttime"] = starttime
+        tprocessdict["endtime"] = endtime
+        tprocessdict["inventory"] = stations
+        tprocessdict.update(dict(
             remove_response_flag=False,
             event_latitude=cmtsource.latitude,
             event_longitude=cmtsource.longitude,
@@ -161,10 +155,10 @@ def process_synt(outdir):
         # Multiprocessing does not work in ipython hence we check first
         # we are in an ipython environment
         if multiprocesses <= 1 or isipython():
-            pdata = process_stream(sdata, **processdict)
+            pdata = process_stream(sdata, **tprocessdict)
         else:
             pdata = queue_multiprocess_stream(
-                sdata, processdict, nproc=multiprocesses)
+                sdata, tprocessdict, nproc=multiprocesses)
 
         # Write synthetics
         write_synt(pdata, outdir, _wtype, it, ls)
@@ -214,14 +208,8 @@ def process_dsdm(outdir, nm):
     # Read metadata
     stations = read_inventory(os.path.join(metadir, 'stations.xml'))
 
-    print(processdict)
-    print(processdict.keys())
-
     # Process each wavetype.
     for _wtype in processdict.keys():
-
-        print(_wtype)
-        print(processdict[_wtype]["process"]["relative_starttime"])
 
         sdata = deepcopy(synt)
 
@@ -232,14 +220,14 @@ def process_dsdm(outdir, nm):
             + processdict[_wtype]["process"]["relative_endtime"]
 
         # Process dict
-        processdict = deepcopy(processdict[_wtype]["process"])
+        tprocessdict = deepcopy(processdict[_wtype]["process"])
 
-        processdict.pop("relative_starttime")
-        processdict.pop("relative_endtime")
-        processdict["starttime"] = starttime
-        processdict["endtime"] = endtime
-        processdict["inventory"] = stations
-        processdict.update(dict(
+        tprocessdict.pop("relative_starttime")
+        tprocessdict.pop("relative_endtime")
+        tprocessdict["starttime"] = starttime
+        tprocessdict["endtime"] = endtime
+        tprocessdict["inventory"] = stations
+        tprocessdict.update(dict(
             remove_response_flag=False,
             event_latitude=cmtsource.latitude,
             event_longitude=cmtsource.longitude,
@@ -250,10 +238,10 @@ def process_dsdm(outdir, nm):
         # Multiprocessing does not work in ipython hence we check first
         # we are in an ipython environment
         if multiprocesses <= 1 or isipython():
-            pdata = process_stream(sdata, **processdict)
+            pdata = process_stream(sdata, **tprocessdict)
         else:
             pdata = queue_multiprocess_stream(
-                sdata, processdict, nproc=multiprocesses)
+                sdata, tprocessdict, nproc=multiprocesses)
 
         if perturbation is not None:
             stream_multiply(pdata, 1.0/perturbation)
