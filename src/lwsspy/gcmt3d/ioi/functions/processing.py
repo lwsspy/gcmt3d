@@ -55,8 +55,14 @@ def process_data(outdir):
     # Read metadata
     stations = read_inventory(os.path.join(metadir, 'stations.xml'))
 
+    print(processdict)
+    print(processdict.keys())
+    
     # Process each wavetype.
     for _wtype in processdict.keys():
+
+        print(_wtype)
+        print(processdict[_wtype]["process"]["relative_starttime"])
 
         sdata = deepcopy(data)
 
@@ -210,7 +216,7 @@ def process_dsdm(outdir, nm):
 
     print(processdict)
     print(processdict.keys())
-    
+
     # Process each wavetype.
     for _wtype in processdict.keys():
 
