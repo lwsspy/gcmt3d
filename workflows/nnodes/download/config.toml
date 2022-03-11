@@ -1,17 +1,18 @@
 [job]
-system = ["nnodes.job", "Tiger"]
+system = ["nnodes.job", "Local"]
 name = "download"
 nnodes = 1
 account = "GEO111"
 walltime = 120.0
-gap = 2.0
+gap = 5.0
 debug = true
 node_splittable = true
 
 [root]
 task = ["lwsspy.gcmt3d.ioi.nnodes.download", "main"]
 task_nnodes = 1
-inputfile = "/home/lsawade/lwsspy/lwsspy.gcmt3d/src/lwsspy/gcmt3d/ioi/input.yml"
-max_downloads = 32
+inputfile = "/ccs/home/lsawade/events/download/input.yml"
+max_downloads = 1
 download_mpi = 0
-events_per_chunk = 500
+events_per_chunk = 1
+eventid = "C051200C"
