@@ -55,6 +55,8 @@ def main(node: Node):
 
     # If eventid in files
     if eventflag:
+        print('Only downloading specific events ... ')
+
         nevents = []
 
         eventnames = [
@@ -71,10 +73,15 @@ def main(node: Node):
         for _id in eventids:
             idx = eventnames.index(_id)
             nevents.append(eventfiles[idx])
-   
+
+        
+        eventfiles = nevents
+
     if maxflag:
         eventfiles = eventfiles[:node.max_downloads]
 
+    print(nevents)
+    
     # Node download MPI or not
     if node.download_mpi == 0:
 
@@ -84,7 +91,6 @@ def main(node: Node):
 
         for chunk in eventfile_chunks:
             node.add(download_chunks, concurrent=True, eventfiles=chunk)
-
 
     else:
 
