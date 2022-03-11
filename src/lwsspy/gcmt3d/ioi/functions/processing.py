@@ -165,12 +165,27 @@ def process_synt(outdir, verbose=True):
         # Multiprocessing does not work in ipython hence we check first
         # we are in an ipython environment
         if multiprocesses <= 1 or isipython():
+
+            # Verbose output
             if verbose:
                 print(f"    ... in serial.")
+            
+            # Processing
             pdata = process_stream(sdata, **tprocessdict)
+        
         else:
+
+            # Verbose output
             if verbose:
                 print(f"    ... in parallel using {multiprocesses} cores.")
+            # This is sooo important for parallel processing
+            # If you don't set this numpy, mkl, etc. will try to use threads
+            # for processing, but you do not want that, because you want to 
+            # distribute work to the different cores manually. If this is not 
+            # set, the different cores will fight for threads!!!!
+            os.environ["OMP_NUM_THREADS"] = "1"
+            
+            # Processing
             pdata = queue_multiprocess_stream(
                 sdata, tprocessdict, nproc=multiprocesses, verbose=verbose)
 
@@ -255,8 +270,26 @@ def process_dsdm(outdir, nm):
         # Multiprocessing does not work in ipython hence we check first
         # we are in an ipython environment
         if multiprocesses <= 1 or isipython():
+
+            # Verbose output
+            if verbose:
+                print(f"    ... in serial.")
+
+            # Processing
             pdata = process_stream(sdata, **tprocessdict)
         else:
+            # Verbose output
+            if verbose:
+                print(f"    ... in parallel using {multiprocesses} cores.")
+            
+            # This is sooo important for parallel processing
+            # If you don't set this numpy, mkl, etc. will try to use threads
+            # for processing, but you do not want that, because you want to 
+            # distribute work to the different cores manually. If this is not 
+            # set, the different cores will fight for threads!!!!
+            os.environ["OMP_NUM_THREADS"] = "1"
+
+            # Processing
             pdata = queue_multiprocess_stream(
                 sdata, tprocessdict, nproc=multiprocesses)
 
@@ -304,7 +337,7 @@ def merge_windows(data_stream: Stream, synt_stream: Stream):
                 obs_tr, synt_tr)
 
 
-def window(outdir):
+def window(outdir, verbose=True):
 
     # Reset CPU affinity important for SUMMIT
     reset_cpu_affinity()
@@ -334,6 +367,9 @@ def window(outdir):
     # Loop over
     for _wtype in processdict.keys():
 
+        if verbose:
+            print(f"Windowing {_wtype} ...")
+
         # Read synthetics and data
         synt = read_synt(outdir, _wtype, 0, 0)
         data = read_data(outdir, _wtype)
@@ -350,11 +386,29 @@ def window(outdir):
 
             # Serial or Multiprocessing
             if multiprocesses <= 1:
+                 # Verbose output
+                if verbose:
+                    print(f"    ... in serial")
+
+                # Windowing
                 window_on_stream(data, synt, **wrapwindowdict)
             else:
+
+                # Verbose output
+                if verbose:
+                    print(f"    ...in parallel using {multiprocesses} cores.")
+
+                # This is sooo important for parallel processing
+                # If you don't set this numpy, mkl, etc. will try to use threads
+                # for processing, but you do not want that, because you want to 
+                # distribute work to the different cores manually. If this is not 
+                # set, the different cores will fight for threads!!!!
+                os.environ["OMP_NUM_THREADS"] = "1"
+
+                # Windowing
                 data = queue_multiwindow_stream(
                     data, synt,
-                    wrapwindowdict, nproc=multiprocesses)
+                    wrapwindowdict, nproc=multiprocesses, verbose=verbose)
 
         if len(processdict[_wtype]["window"]) > 1:
             merge_windows(data, synt)
