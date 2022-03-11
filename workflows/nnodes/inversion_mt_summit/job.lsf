@@ -2,9 +2,10 @@
 #BSUB -J inversion
 #BSUB -W 1:00
 #BSUB -nnodes 10
+#BSUB -notify "start" 
 #BSUB -o inversion.o
-#BSUB -e inversion.e
 #BSUB -P GEO111
+#BSUB -q debug
 #BSUB -alloc_flags "gpumps"
 
 # For parallel python to understand to not look for other cores
