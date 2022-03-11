@@ -197,10 +197,10 @@ def process_synt(outdir, verbose=True):
 #     process_synt(*args)
 
 
-def process_dsdm(outdir, nm):
+def process_dsdm(outdir, nm, verbose=False):
 
     # Reset CPU affinity important for SUMMIT
-    reset_cpu_affinity(verbose=True)
+    reset_cpu_affinity(verbose=verbose)
 
     # Get iter,step
     it = get_iter(outdir)

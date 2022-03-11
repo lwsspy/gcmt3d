@@ -20,6 +20,21 @@ def bin():
     This script calls a python function that process the data and saves them into
     an event file.
 
+    IMPORTANT FOR PARALLEL COMPUTATION
+    ----------------------------------
+        Before execution, make sure that you
+
+        export OMP_NUM_THREADS=1
+
+        This is sooo important for parallel processing
+        If you don't set this numpy, mkl, etc. will try to use threads
+        for processing, but you do not want that, because you want to 
+        distribute work to the different cores manually. If this is not 
+        set, the different cores will fight for threads!!!!
+        
+        You cannot prepend this to the executable presumably because the entry 
+        point preloads numpy which again causes trouble.
+    
     """
 
     # Get args or print usage statement 

@@ -8,7 +8,6 @@
 #BSUB -alloc_flags "gpumps"
 
 # For parallel python to understand to not look for other cores
-export OMP_NUM_THREADS=1
 
 # Get modules for specfem
 module purge
@@ -20,6 +19,9 @@ module load gcc spectrum-mpi cuda cmake boost
 # Change directory to workflow dir
 cd /ccs/home/lsawade/lwsspy_summit/lwsspy.gcmt3d/workflows/nnodes/inversion_mt_summit
 
+# Putting this here because I think the CONDA actication overwrites this 
+# Variable.
+export OMP_NUM_THREADS=1
 
 # Run nnodes workflow
 nnrun
