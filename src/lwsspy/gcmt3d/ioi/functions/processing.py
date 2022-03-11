@@ -398,13 +398,6 @@ def window(outdir, verbose=True):
                 if verbose:
                     print(f"    ...in parallel using {multiprocesses} cores.")
 
-                # This is sooo important for parallel processing
-                # If you don't set this numpy, mkl, etc. will try to use threads
-                # for processing, but you do not want that, because you want to 
-                # distribute work to the different cores manually. If this is not 
-                # set, the different cores will fight for threads!!!!
-                os.environ["OMP_NUM_THREADS"] = "1"
-
                 # Windowing
                 data = queue_multiwindow_stream(
                     data, synt,

@@ -5,6 +5,13 @@
 :Last Modified:
     2022.03.04 11.00
 """
+from os import environ
+# This is sooo important for parallel processing
+# If you don't set this numpy, mkl, etc. will try to use threads
+# for processing, but you do not want that, because you want to 
+# distribute work to the different cores manually. If this is not 
+# set, the different cores will fight for threads!!!!
+environ["OMP_NUM_THREADS"] = "1"
 
 from sys import argv, exit
 from ..functions.processing import process_synt
