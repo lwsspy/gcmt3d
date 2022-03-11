@@ -3,6 +3,7 @@ import os
 from copy import deepcopy
 from obspy import read, read_events, Stream
 from lwsspy.utils.isipython import isipython
+from lwsspy.utils.reset_cpu_affinity import reset_cpu_affinity
 from lwsspy.utils.io import read_yaml_file
 from lwsspy.seismo.source import CMTSource
 from lwsspy.seismo.process.process import process_stream
@@ -22,6 +23,9 @@ from .log import get_iter, get_step
 
 
 def process_data(outdir):
+
+    # Reset CPU affinity important for SUMMIT
+    reset_cpu_affinity()
 
     # Get dir
     metadir = os.path.join(outdir, 'meta')
@@ -97,6 +101,9 @@ def process_data(outdir):
 
 def process_synt(outdir):
 
+    # Reset CPU affinity important for SUMMIT
+    reset_cpu_affinity()
+
     # Get iter,step
     it = get_iter(outdir)
     ls = get_step(outdir)
@@ -169,6 +176,9 @@ def process_synt(outdir):
 
 
 def process_dsdm(outdir, nm):
+
+    # Reset CPU affinity important for SUMMIT
+    reset_cpu_affinity()
 
     # Get iter,step
     it = get_iter(outdir)
@@ -288,6 +298,9 @@ def merge_windows(data_stream: Stream, synt_stream: Stream):
 
 
 def window(outdir):
+
+    # Reset CPU affinity important for SUMMIT
+    reset_cpu_affinity()
 
     # Get dirs
     metadir = os.path.join(outdir, 'meta')
