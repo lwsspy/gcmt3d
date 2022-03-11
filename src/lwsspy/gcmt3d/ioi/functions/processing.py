@@ -211,6 +211,9 @@ def process_dsdm(outdir, nm):
     # Process each wavetype.
     for _wtype in processdict.keys():
 
+        print(_wtype)
+        print(processdict[_wtype]["process"]["relative_starttime"])
+
         sdata = deepcopy(synt)
 
         # Call processing function and processing dictionary
