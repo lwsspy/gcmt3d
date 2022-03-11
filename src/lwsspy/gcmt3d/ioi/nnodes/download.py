@@ -42,16 +42,20 @@ def chunkfunc(sequence: Sequence, n: int):
 # Loops over events: TODOWNLOAD event check
 def main(node: Node):
 
+    print('Hello')
     node.concurrent = False
 
+    print('checking eventfiles')
     # Get todo events
     eventfiles = check_events_todownload(node.inputfile)
 
     # Specific event id
     eventflag = True if node.eventid is not None else False
+    print('checking eventflag', eventflag)
 
     # Maximum download flag
     maxflag = True if node.max_downloads != 0 else False
+    print('checking maxflag', maxflag)
 
     # If eventid in files
     if eventflag:
@@ -77,6 +81,7 @@ def main(node: Node):
         eventfiles = nevents
 
     if maxflag:
+        print(f"Only getting {node.max_downloads} event(s).")
         eventfiles = eventfiles[:node.max_downloads]
 
     print(eventfiles)
