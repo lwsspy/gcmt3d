@@ -16,6 +16,9 @@ source /ccs/home/lsawade/dtn_miniconda3/etc/profile.d/conda.sh && conda activate
 # Change directory to the 
 cd /ccs/home/lsawade/lwsspy_dtn/lwsspy.gcmt3d/workflows/nnodes/download_dtn
 
+# Remove the pickle
+rm -f root.pickle
+
 # Run nnodes
 nnrun
 
