@@ -2,7 +2,6 @@
 #BSUB -J inversion
 #BSUB -W 1:00
 #BSUB -nnodes 10
-#BSUB -notify "start" 
 #BSUB -o inversion.o
 #BSUB -P GEO111
 #BSUB -q debug
