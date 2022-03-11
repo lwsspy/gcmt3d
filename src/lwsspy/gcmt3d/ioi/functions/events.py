@@ -66,6 +66,8 @@ def create_event_status_dir(eventdir, inputfile):
 
 
 def add_events(eventdir, inputfile):
+
+
     # Read input params
     inputparams = read_yaml_file(inputfile)
 
@@ -89,7 +91,10 @@ def add_events(eventdir, inputfile):
     initdir = os.path.join(neweventdir, "EVENTS_INIT")
 
     # Eventfiles
-    eventfilelist = [os.path.join(eventdir, i) for i in os.listdir(eventdir)]
+    if os.path.isdir(eventdir):
+        eventfilelist = [os.path.join(eventdir, i) for i in os.listdir(eventdir)]
+    elif os.path.isfile(eventdir):
+        eventfilelist = [eventdir,]
 
     # Make catalog
     cat = CMTCatalog.from_file_list(eventfilelist)

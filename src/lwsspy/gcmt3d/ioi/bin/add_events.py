@@ -2,7 +2,7 @@
 
 Usage: 
 
-    gcmt3d-add-events <path/to/eventdir> <path/to/input.yml>
+    gcmt3d-add-events {<path/to/eventdir> | <path/to/event>} <path/to/input.yml>
 
 This script calls a python function that adds events to an existing event status
 directory. It checks whether events have already been added before,
