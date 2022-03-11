@@ -80,8 +80,8 @@ def main(node: Node):
     if maxflag:
         eventfiles = eventfiles[:node.max_downloads]
 
-    print(nevents)
-    
+    print(eventfiles)
+
     # Node download MPI or not
     if node.download_mpi == 0:
 
