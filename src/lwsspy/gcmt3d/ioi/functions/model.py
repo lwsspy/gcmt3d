@@ -27,7 +27,7 @@ def write_scaling(scaling, outdir):
 
 def read_scaling(outdir):
     metadir = os.path.join(outdir, 'meta')
-    return np.load(os.path.join(metadir, 'scaling.npy')).tolist()
+    return np.load(os.path.join(metadir, 'scaling.npy'))
 
 
 def write_model_names(model_names, outdir):
@@ -42,7 +42,13 @@ def read_model_names(outdir):
 
 
 def print_model_names(outdir):
-    print(read_model_names(outdir))
+
+    # Get model names
+    model_names = read_model_names(outdir)
+
+    # Print model names
+    for _i, _name in enumerate(model_names):
+        print(f"{_i:>5}: {_name}")
 
 
 def get_simpars(outdir):
@@ -58,7 +64,7 @@ def get_simpars(outdir):
     return idx
 
 
-def write_model(m, outdir,it, ls=None):
+def write_model(m, outdir, it, ls=None):
     """Takes in model vector, modldirectory, iteration and linesearch number
     and write model to modl directory.
 

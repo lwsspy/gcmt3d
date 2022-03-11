@@ -6,7 +6,8 @@ from .data import read_data_windowed
 from .forward import read_synt
 from .kernel import read_dsdm
 from .model import read_model_names
-from .log import get_iter, get_step
+from .log import get_iter, get_step, write_log
+
 
 def write_gradient(g, outdir, it, ls=None):
 
@@ -92,4 +93,5 @@ def gradient(outdir):
     # Write Gradients
     write_gradient(grad, outdir, it, ls)
 
-    print("      g: ", np.array2string(grad, max_line_width=int(1e10)))
+    write_log(
+        outdir, f"      g: {np.array2string(grad, max_line_width=int(1e10))}")

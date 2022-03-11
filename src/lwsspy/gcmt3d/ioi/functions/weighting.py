@@ -85,14 +85,20 @@ def compute_weights(outdir):
                     cmtsource.longitude,
                     latitudes, longitudes, nbins=12, p=0.5)
 
+                # Normalize the azimuthal weights
+                aw /= np.sum(aw)/len(aw)
+
                 # Save azi weights into dict
                 weights[_wtype][_component]["azimuthal"] \
                     = deepcopy(aw)
 
                 # Get Geographical weights
                 gw = GeoWeights(latitudes, longitudes)
-                _, _, ref, _ = gw.get_condition()
+                _, _, ref, _ = gw.get_condition(ctype='fracmax', param=0.1)
                 geo_weights = gw.get_weights(ref)
+
+                # Normalize the azimuthal weights
+                geo_weights /= np.sum(geo_weights)/len(geo_weights)
 
                 # Save geo weights into dict
                 weights[_wtype][_component]["geographical"] \

@@ -4,7 +4,7 @@ from lwsspy.seismo.costgradhess import CostGradHess
 from lwsspy.utils.io import read_yaml_file
 from .data import read_data_windowed
 from .forward import read_synt
-from .log import get_iter, get_step
+from .log import get_iter, get_step, write_log
 
 
 def write_cost(c, outdir, it, ls=None):
@@ -72,4 +72,5 @@ def cost(outdir):
 
     write_cost(cost, outdir, it, ls)
 
-    print("      c: ", np.array2string(cost, max_line_width=int(1e10)))
+    write_log(
+        outdir, f"      c: {np.array2string(cost, max_line_width=int(1e10))}")

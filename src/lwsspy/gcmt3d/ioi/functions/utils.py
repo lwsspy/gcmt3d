@@ -13,10 +13,9 @@ from lwsspy.seismo.specfem.createsimdir import createsimdir
 from lwsspy.utils.io import read_yaml_file, write_yaml_file
 from lwsspy.gcmt3d.process_classifier import ProcessParams
 from .constants import Constants
-from .model import read_model_names, write_model, write_model_names, \
+from .model import read_model_names, read_scaling, write_model, write_model_names, \
     write_scaling, write_perturbation
 from .log import reset_iter, reset_step, write_status
-from .get_data import stage_data
 
 
 def write_pickle(filename, obj):
@@ -52,6 +51,37 @@ def rmdir(cdir):
         Removes directory recursively
     """
     shutil.rmtree(cdir)
+
+
+def check_mt_inv(mnames):
+    """Given the model parameter names. This function checks whether 
+    the inversion is for a moment tensor."""
+
+    # If one moment tensor parameter is given all must be given.
+    if any([_par in mnames for _par in Constants.mt_params]):
+        checklist = [_par for _par in Constants.mt_params if _par in mnames]
+        if not all([_par in checklist for _par in Constants.mt_params]):
+            raise ValueError(
+                "If one moment tensor parameter is to be "
+                "inverted. All must be inverted.\n"
+                "Update your parameters.")
+        else:
+            moment_tensor_inv = True
+    else:
+        moment_tensor_inv = False
+
+    return moment_tensor_inv
+
+
+def check_invertible(mnames):
+    """Checks whether all parameter can be inverted for."""
+
+    for _par in mnames:
+        if _par not in Constants.parameter_check_list:
+            raise ValueError(
+                f"{_par} not supported at this point. \n"
+                f"Available parameters are {Constants.parameter_check_list}")
+
 
 def downloaddir(inputfile, cmtfilename, get_dirs_only=False):
 
@@ -162,6 +192,32 @@ def optimdir(inputfile, cmtfilename, get_dirs_only=False):
 
     return outdir, modldir, metadir, datadir, simudir, ssyndir, sfredir, syntdir, \
         dsdmdir, costdir, graddir, hessdir, descdir, optdir
+
+
+def basiccheck(outdir: str):
+    """Should be performed after created the inversion dictionary."""
+
+    # Get input params
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # Get Zerotrace flag
+    zero_trace = inputparams["zero_trace"]
+
+    # Mnames
+    mnames = read_model_names(outdir)
+
+    # Check Parameter dict for wrong parameters, raises error if not invertible
+    check_invertible(mnames)
+    
+    # Check whether inversion is a moment tensor inversion
+    moment_tensor_inv = check_mt_inv(mnames)
+
+    # Check zero trace condition
+    if zero_trace:
+        if moment_tensor_inv is False:
+            raise ValueError("Can only use Zero Trace condition "
+                             "if inverting for Moment Tensor.\n"
+                             "Update your parameters.")
 
 
 def adapt_processdict(cmtsource, processdict, duration):
@@ -305,8 +361,24 @@ def prepare_model(outdir):
     # Get scaling
     scaling_vector = np.array([val['scale'] for _, val in parameters.items()])
 
+    # If moment tensor inversion, scale moment tensor elements with the scalar
+    # moment
+    if check_mt_inv(model_names):
+
+        # Get initial scalar moment
+        M0 = init_cmt.M0
+
+        # Update the parameters
+        for _i, _name in enumerate(model_names):
+            if _name in Constants.mt_params:
+                scaling_vector[_i] = M0
+
     # Write scaling vector
-    write_scaling(scaling_vector, outdir)
+    write_scaling(scaling_vector.astype(float), outdir)
+
+    # Read scaling throws an error if the scaling vector is for some reason of
+    # type object
+    read_scaling(outdir)
 
     # Get perturbation
     perturb_vector = np.array([val['pert'] for _, val in parameters.items()])
@@ -454,8 +526,9 @@ def create_forward_dirs(cmtfile, inputfile):
     # Prepare model
     prepare_model(outdir)
 
-    # Get data
-    stage_data(outdir)
+    # # Get data
+    # stage_data(outdir)
+    basiccheck(outdir)
 
     # Prep Stations
     prepare_stations(outdir)

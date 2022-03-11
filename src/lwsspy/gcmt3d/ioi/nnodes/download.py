@@ -42,26 +42,63 @@ def chunkfunc(sequence: Sequence, n: int):
 # Loops over events: TODOWNLOAD event check
 def main(node: Node):
 
+    print('Hello')
     node.concurrent = False
+
+    print('checking eventfiles')
+    # Get todo events
+    eventfiles = check_events_todownload(node.inputfile)
+
+    # Specific event id
+    eventflag = True if node.eventid is not None else False
+    print('checking eventflag', eventflag)
 
     # Maximum download flag
     maxflag = True if node.max_downloads != 0 else False
+    print('checking maxflag', maxflag)
 
-    eventfiles = check_events_todownload(node.inputfile)
+    # If eventid in files
+    if eventflag:
+        print('Only downloading specific events ... ')
+
+        nevents = []
+
+        eventnames = [
+            CMTSource.from_CMTSOLUTION_file(_file).eventname
+            for _file in eventfiles]
+
+        # Check whether multiple eventids are requested
+        if isinstance(node.eventid, list):
+            eventids = node.eventid
+        else:
+            eventids = [node.eventid]
+
+        # If id in eventnames, add the eventfile
+        for _id in eventids:
+            idx = eventnames.index(_id)
+            nevents.append(eventfiles[idx])
+  
+        eventfiles = nevents
 
     if maxflag:
+        print(f"Only getting {node.max_downloads} event(s).")
         eventfiles = eventfiles[:node.max_downloads]
+
+    print(eventfiles)
 
     # Node download MPI or not
     if node.download_mpi == 0:
 
         # Find number of chunks by
         # Nchunks = round(len(eventfiles)/int(node.events_per_chunk))
-        eventfile_chunks = chunkfunc(eventfiles, node.events_per_chunk)
+        if len(eventfiles) == 1:
+            eventfile_chunks = [eventfiles,]
+        else:
+            eventfile_chunks = chunkfunc(eventfiles, node.events_per_chunk)
+        
 
         for chunk in eventfile_chunks:
             node.add(download_chunks, concurrent=True, eventfiles=chunk)
-
 
     else:
 
@@ -81,8 +118,7 @@ def download_chunks(node: Node):
             outdir = out[0]
 
             node.add(download, concurrent=True, name=eventname + "-Download",
-                     outdir=outdir, event=event, eventname=eventname,
-                     cwd='./logs/' + eventname)
+                     outdir=outdir, event=event, eventname=eventname)
 
 async def download(node: Node):
 

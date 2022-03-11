@@ -44,7 +44,7 @@ def process_data(outdir):
     datadatabase = inputparams["datadatabase"]
 
     # Get datadir in data database
-    ddatadir = os.path.join(datadatabase, eventname, 'waveforms', '*.mseed')
+    ddatadir = os.path.join(datadatabase, eventname)
 
     # Read number of processes from input params
     multiprocesses = inputparams['multiprocesses']

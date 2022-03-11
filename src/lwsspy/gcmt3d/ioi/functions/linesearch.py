@@ -151,6 +151,10 @@ def linesearch(outdir):
     # Compute q descent dot grad
     q = np.sum(dm*g)
 
+    # Read inputparams
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+    factor = inputparams['optimization']['factor']
+
     # Write first set of linesearch parameters
     if ls == 0:
         # Set all values to the initial values
@@ -197,7 +201,7 @@ def linesearch(outdir):
             else:
                 # Write to optimization values to file
                 alpha_l, alpha_r, alpha = update_alpha(
-                    w1, w2, alpha_l, alpha_r, alpha, factor=10.0)
+                    w1, w2, alpha_l, alpha_r, alpha, factor=factor)
 
     # Write to optimization values to file
     write_optvals([q, alpha_l, alpha_r, alpha, w1, w2, w3], outdir, it, ls)

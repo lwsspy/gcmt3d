@@ -1,5 +1,6 @@
 # %%
 import os
+from attr import has
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import stage_data
@@ -24,9 +25,41 @@ from lwsspy.gcmt3d.ioi.functions.events import check_events_todo
 def main(node: Node):
     node.concurrent = True
 
-    events = check_events_todo(node.inputfile)
+    # Events to be inverted
+    eventfiles = check_events_todo(node.inputfile)
 
-    for event in events:
+    # Specific event id(s)
+    eventflag = True if node.eventid is not None else False
+
+    # Maximum download flag
+    maxflag = True if node.max_events != 0 else False
+
+    # If eventid in files only use the ids
+    if eventflag:
+        nevents = []
+
+        eventnames = [
+            CMTSource.from_CMTSOLUTION_file(_file).eventname
+            for _file in eventfiles]
+
+        # Check whether multiple eventids are requested
+        if isinstance(node.eventid, list):
+            eventids = node.eventid
+        else:
+            eventids = [node.eventid]
+
+        # If id in eventnames, add the eventfile
+        for _id in eventids:
+            idx = eventnames.index(_id)
+            nevents.append(eventfiles[idx])
+
+    # If max number of inversion select first X
+    if maxflag:
+        eventfiles = eventfiles[:node.max_downloads]
+
+    
+    # Loop over inversions
+    for event in eventfiles:
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
         out = optimdir(node.inputfile, event, get_dirs_only=True)
         outdir = out[0]

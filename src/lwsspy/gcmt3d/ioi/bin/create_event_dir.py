@@ -43,5 +43,3 @@ def bin():
 
     # Run the initializer
     create_event_status_dir(eventdir, inputfile)
-
-

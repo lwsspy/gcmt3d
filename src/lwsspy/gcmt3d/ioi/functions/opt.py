@@ -3,7 +3,7 @@ import wave
 import numpy as np
 from lwsspy.utils.io import read_yaml_file
 
-from .model import read_model, write_model, read_scaling
+from .model import read_model, read_model_names, write_model, read_scaling
 from .cost import read_cost, write_cost
 from .descent import read_descent
 from .forward import read_synt, write_synt
@@ -11,11 +11,46 @@ from .kernel import read_dsdm, write_dsdm
 from .gradient import read_gradient, write_gradient
 from .hessian import read_hessian, write_hessian
 from .linesearch import read_optvals
-from .log import write_status, get_iter, get_step
+from .log import write_status, get_iter, get_step, write_log
 
 
-def read_optparams(paramdir):
-    pass
+def constrain_model(outdir, m):
+    """Only constrains parameters if
+    ``parameter_constraints`` is set in the input file"""
+
+    # Get input parameters
+    inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
+
+    # If no parameters should be constraint, return
+    if hasattr(inputparams, 'parameter_constraints') is False:
+        return m
+    elif inputparams['parameter_constraints'] is None:
+        return m
+        
+    # Get lower and upper constraints
+    lower = inputparams['parameter_constraints']['lower']
+    upper = inputparams['parameter_constraints']['upper']
+
+    # Get model names
+    mnames = read_model_names(outdir)
+
+    # Set lower bound for the model update
+    if lower is not None:
+        for _par, _low in lower.items():
+            idx = mnames.index(_par)
+
+            if m[idx] < _low:
+                m[idx] = _low
+
+    # Set upper bound for the model update
+    if upper is not None:
+        for _par, _upp in upper.items():
+            idx = mnames.index(_par)
+
+            if m[idx] > _upp:
+                m[idx] = _upp
+
+    return m
 
 
 def update_model(outdir):
@@ -32,10 +67,14 @@ def update_model(outdir):
     # Compute new model
     m_new = m + alpha * dm
 
+    # Constrain model if ``parameter_constraints`` is set in the `input.yml`
+    m_new = constrain_model(outdir, m_new)
+
     # Write new model
     write_model(m_new, outdir, it, ls)
 
-    # print("      m: ", np.array2string(m_new, max_line_width=int(1e10)))
+    write_log(
+        outdir, f"      m: {np.array2string(m_new, max_line_width=int(1e10))}")
 
 
 def update_mcgh(outdir):
@@ -94,7 +133,7 @@ def check_done(outdir):
 
     # Get iter,step
     it = get_iter(outdir)
-    ls = get_step(outdir)
+    # ls = get_step(outdir)
     
     # Read input parameters and optimization characteristics
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
@@ -112,8 +151,8 @@ def check_done(outdir):
 
     # Get the scaled models
     scaling = read_scaling(outdir)
-    smodel = read_model(outdir, it, 0)/scaling
-    smodel_prev = read_model(outdir, it+1, 0)/scaling
+    smodel_prev = read_model(outdir, it, 0)/scaling
+    smodel = read_model(outdir, it+1, 0)/scaling
 
     # Read necessary vals
     # _, _, _, alpha, _, _, _ = read_optvals(outdir, it, ls)

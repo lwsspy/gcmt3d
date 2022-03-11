@@ -37,11 +37,8 @@ def bin():
         # Check event statuses
         check_events(inputfile)
     elif len(argv) == 3:
-        inputfile, _  = argv[1:]
-        check_events(inputfile, reset=True)
+        inputfile, resetflag = argv[1:]
+        check_events(inputfile, resetopt=resetflag)
     else:
         print(__doc__)
         exit()
-        
-
-    

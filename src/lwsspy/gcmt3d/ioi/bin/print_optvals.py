@@ -9,7 +9,7 @@
 
 from sys import argv, exit
 from os import path, listdir
-from numpy import load
+from numpy import load, array2string
 
 
 def bin():
@@ -17,13 +17,12 @@ def bin():
 
     Usage: 
 
-        gcmt3d-print-cost eventdir [anything]
+        gcmt3d-print-model eventdir [anything]
 
-    This script calls a python function that prints the costs. If any 
+    This script calls a python function that prints the models. If any 
     command line arguments are included the function includes the linesearches.
 
     """
-
 
     # Get args or print usage statement
     if (len(argv) < 2) or (len(argv) > 3) or (argv[1] == '-h') or (argv[1] == '--help'):
@@ -34,22 +33,21 @@ def bin():
         lsflag = True if len(argv) == 3 else False
 
     # Print costs
-    costdir = path.join(eventdir, 'cost')
+    optdir = path.join(eventdir, 'opt')
 
-    for file in sorted(listdir(costdir)):
-        
+    for file in sorted(listdir(optdir)):
+
         # Combine the filename
-        filename = path.join(costdir, file)
+        filename = path.join(optdir, file)
 
         # Get iteration and step from filename
         _, it, ls = file.split("_")
         it = int(it[2:])
         ls = int(ls[2:-4])
 
-        # Check filename for iteration and linesearch numberf
+        # Check filename for iteration and linesearch number
         if lsflag:
-            print(f"Iter/Step: {it:0>5}/{ls:0>5} -> Cost: {load(filename):f}")
+            print(f"Iter/Step: {it:0>5}/{ls:0>5} -> Model: {array2string(load(filename), max_line_width=1e10)}")
         else:
             if ls == 0:
-                print(f"Iter: {it:0>5} -> Cost: {load(filename):f}")
-
+                print(f"Iter: {it:0>5} -> Model: {array2string(load(filename), max_line_width=1e10)}")
