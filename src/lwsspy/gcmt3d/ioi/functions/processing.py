@@ -99,7 +99,7 @@ def process_data(outdir):
         write_data(pdata, outdir, _wtype)
 
 
-def process_synt(outdir):
+def process_synt(outdir, verbose=True):
 
     # Reset CPU affinity important for SUMMIT
     reset_cpu_affinity(verbose=True)
@@ -135,6 +135,9 @@ def process_synt(outdir):
     # Process each wavetype.
     for _wtype in processdict.keys():
 
+        if verbose:
+            print(f"Processing {_wtype} ...")
+
         sdata = deepcopy(synt)
 
         # Call processing function and processing dictionary
@@ -162,8 +165,12 @@ def process_synt(outdir):
         # Multiprocessing does not work in ipython hence we check first
         # we are in an ipython environment
         if multiprocesses <= 1 or isipython():
+            if verbose:
+                print(f"    ... in serial.")
             pdata = process_stream(sdata, **tprocessdict)
         else:
+            if verbose:
+                print(f"    ... in parallel using {multiprocesses} cores.")
             pdata = queue_multiprocess_stream(
                 sdata, tprocessdict, nproc=multiprocesses)
 
