@@ -172,7 +172,7 @@ def process_synt(outdir, verbose=True):
             if verbose:
                 print(f"    ... in parallel using {multiprocesses} cores.")
             pdata = queue_multiprocess_stream(
-                sdata, tprocessdict, nproc=multiprocesses)
+                sdata, tprocessdict, nproc=multiprocesses, verbose=verbose)
 
         # Write synthetics
         write_synt(pdata, outdir, _wtype, it, ls)
