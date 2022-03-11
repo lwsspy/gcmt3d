@@ -87,7 +87,11 @@ def main(node: Node):
 
         # Find number of chunks by
         # Nchunks = round(len(eventfiles)/int(node.events_per_chunk))
-        eventfile_chunks = chunkfunc(eventfiles, node.events_per_chunk)
+        if len(eventfiles) == 1:
+            eventfile_chunks = [eventfiles,]
+        else:
+            eventfile_chunks = chunkfunc(eventfiles, node.events_per_chunk)
+        
 
         for chunk in eventfile_chunks:
             node.add(download_chunks, concurrent=True, eventfiles=chunk)
