@@ -3,6 +3,7 @@ import os
 import shutil
 import numpy as np
 import _pickle as pickle
+from pprint import pprint
 # from obspy import read_events
 from lwsspy.seismo.specfem.read_parfile import read_parfile
 from lwsspy.seismo.specfem.write_parfile import write_parfile
@@ -246,6 +247,8 @@ def adapt_processdict(cmtsource, processdict, duration):
         cmtsource.moment_magnitude, cmtsource.depth_in_m)
     proc_params = PP.determine_all()
 
+    pprint(proc_params)
+
     # Adjust the process dictionary
     for _wave, _process_dict in proc_params.items():
 
@@ -288,9 +291,12 @@ def adapt_processdict(cmtsource, processdict, duration):
         if _wave not in proc_params:
             popkeys.append(_wave)
 
+    pprint(popkeys)
+
     for _key in popkeys:
         processdict.pop(_key, None)
 
+    pprint(processdict)
     return processdict
 
 
