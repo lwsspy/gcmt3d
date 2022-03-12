@@ -77,6 +77,9 @@ def get_cmt(
     for _m, _mname in zip(m, model_names):
         setattr(cmtsource, _mname, _m)
 
+    # Update half-duration afterwards.
+    cmtsource.update_hdur()
+
     # Write CMTSOLUTION to oufile
     if outfile:
         cmtsource.write_CMTSOLUTION_file(outfile)

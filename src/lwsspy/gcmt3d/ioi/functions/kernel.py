@@ -75,6 +75,9 @@ def update_cmt_dsdm(outdir):
     for _m, _mname in zip(m, model_names):
         setattr(cmt, _mname, _m)
 
+    # Update half-duration afterwards.
+    cmt.update_hdur()
+
     # For the perturbations it's slightly more complicated.
     for _i, (_pert, _mname) in enumerate(zip(perturbation, model_names)):
 

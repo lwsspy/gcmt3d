@@ -67,6 +67,9 @@ def update_cmt_synt(outdir):
     for _m, _mname in zip(m, model_names):
         setattr(cmtsource, _mname, _m)
 
+    # Update half-duration afterwards.
+    cmtsource.update_hdur()
+    
     # Write CMTSOLUTION to simulation DATA directory
     cmtsource.write_CMTSOLUTION_file(
         os.path.join(ssyndir, 'DATA', 'CMTSOLUTION'))
