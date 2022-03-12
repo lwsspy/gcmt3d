@@ -29,7 +29,7 @@ def bin():
     """
 
     # Get args or print usage statement
-    if (len(argv) == 1) or (len(argv) > 4):
+    if (len(argv) <= 1) or (len(argv) > 4):
         print(bin.__doc__)
         exit()
     elif len(argv) == 2:
@@ -37,11 +37,10 @@ def bin():
         it, ls = None, 0
     elif len(argv) == 3:
         outdir = argv[1]
-        it, ls = argv[2], 0
+        it, ls = int(argv[2]), 0
     elif len(argv) == 4:
         outdir = argv[1]
-        it = argv[2], argv[3]
-    
+        it, ls = int(argv[2]), int(argv[3])
 
     # Print cmtsolution
-    get_cmt(outdir, it, ls)
+    get_cmt(outdir, it=it, ls=ls)

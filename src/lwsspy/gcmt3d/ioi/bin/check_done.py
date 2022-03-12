@@ -1,14 +1,10 @@
 """
 
-Exectuable that checks whether an iteration should be added.
+:Author:
+    Lucas Sawade (lsawade-at-princeton.edu)
 
-Usage:
-    ioi-check-done <optdir> <it> <ls>
-
-where:
-    optdir   - directory containing the optimization parameters
-    it       - iteration number
-    ls       - linesearch number
+:Last Modified:
+    2022.03.04 11.00
 
 """
 
@@ -17,14 +13,24 @@ from ..functions.opt import check_done
 
 
 def bin():
+    """
 
-    if len(argv) != 1+3:
-        print("Note enough or too few input parameters.")
+    Exectuable that checks whether an iteration should be added.
+
+    Usage:
+        ioi-check-done outdir
+
+    where:
+        outdir   - event directory
+
+    """
+
+    # Get args or print usage statement
+    if (len(argv) != 2) or (argv[1] == '-h') or (argv[1] == '--help'):
         print(__doc__)
         exit()
-
-    # Get command line arguments
-    optdir, it, ls = argv[1:4]
+    else:
+        outdir = argv[1]
 
     # Clearlog
-    check_done(optdir, it, ls)
+    check_done(outdir)

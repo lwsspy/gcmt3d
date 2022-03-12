@@ -41,4 +41,3 @@ def bin():
 
     for _todo in TODO:
         print(os.path.basename(_todo))
-    
