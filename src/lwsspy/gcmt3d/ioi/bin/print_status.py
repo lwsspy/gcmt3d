@@ -1,4 +1,4 @@
-""" 
+"""
 
 :Author:
     Lucas Sawade (lsawade-at-princeton.edu)
@@ -14,8 +14,8 @@ from sys import argv, exit
 
 def bin():
     """
-    
-    Usage: 
+
+    Usage:
 
         gcmt3d-print-status <directory>
 

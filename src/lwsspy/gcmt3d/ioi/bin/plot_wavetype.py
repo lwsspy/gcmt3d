@@ -20,6 +20,7 @@ def bin():
         gcmt3d-plot-wave /path/to/eventinvdir <wave>
 
     This script calls a python function that plots wavetype wave.
+    
     """
 
     # Get args or print usage statement 

@@ -1,15 +1,10 @@
 """
 
-Exectuable that checks and writes linesearch parameters for on linesearch
-iteration.
+:Author:
+    Lucas Sawade (lsawade-at-princeton.edu)
 
-Usage:
-    ioi-linesearch <optdir> <descdir> <graddir> <costdir> <it> <ls>
-
-where:
-    optdir   - directory containing the optimization parameters
-    it       - iteration number
-    ls       - linesearch number
+:Last Modified:
+    2022.02.28 16.50
 
 """
 
@@ -18,14 +13,22 @@ from ..functions.linesearch import linesearch
 
 
 def bin():
+    """
 
-    if len(argv) != 6+1:
-        print("Note enough or too few input parameters.")
-        print(__doc__)
+    Exectuable that checks and writes linesearch parameters for on linesearch
+    iteration.
+
+    Usage:
+        gcmt3d-linesearch <eventdir>
+
+    """
+    
+    # Get args or print usage statement 
+    if (len(argv) != 2) or (argv[1] == '-h') or (argv[1] == '--help'):
+        print(bin.__doc__)
         exit()
-
-    # Get command line arguments
-    optdir, descdir, graddir, costdir, it, ls = argv[1:7]
+    else:
+        outdir = argv[1]
 
     # Clearlog
-    linesearch(optdir, descdir, graddir, costdir, it, ls)
+    linesearch(outdir)
