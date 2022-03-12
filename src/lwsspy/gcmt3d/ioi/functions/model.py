@@ -1,6 +1,8 @@
 from curses import meta
 import os
 import numpy as np
+import typing as tp
+from lwsspy.seismo.source import CMTSource
 from .constants import Constants
 from .log import get_iter, get_step
 
@@ -49,6 +51,40 @@ def print_model_names(outdir):
     # Print model names
     for _i, _name in enumerate(model_names):
         print(f"{_i:>5}: {_name}")
+
+
+def get_cmt(
+        outdir: str, it: tp.Optional[int] = None, ls: int = 0,
+        outfile: tp.Optional[str] = None):
+
+    # Get iter,step
+    if it is None:
+        it = get_iter(outdir)
+    
+    # Get dirs
+    metadir = os.path.join(outdir, 'meta')
+
+    # Read metadata and model
+    m = read_model(outdir, it, ls)
+    model_names = read_model_names(outdir)
+
+    # Read original CMT solution
+    cmtsource = CMTSource.from_CMTSOLUTION_file(
+        os.path.join(metadir, 'init_model.cmt')
+    )
+
+    # Update the CMTSOLUTION with the current model state
+    for _m, _mname in zip(m, model_names):
+        setattr(cmtsource, _mname, _m)
+
+    # Write CMTSOLUTION to oufile
+    if outfile:
+        cmtsource.write_CMTSOLUTION_file(outfile)
+        return None
+
+    # Otherwise return cmtsource
+    else:
+        return cmtsource
 
 
 def get_simpars(outdir):
@@ -107,7 +143,7 @@ def read_model(outdir, it, ls=None):
     ndarray
         model vector
     """
-    
+
     if ls is not None:
         fname = f"m_it{it:05d}_ls{ls:05d}.npy"
     else:

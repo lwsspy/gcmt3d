@@ -1,18 +1,5 @@
 """
 
-Exectuable that checks teh optimization parameters on whether further iteration
- or linesearch is necessary.
-
-Usage:
-    ioi-check-optvals <optdir> <it> <ls>
-                
-where:
-    optdir   - directory containing the optimization parameters
-    it       - iteration number
-    ls       - linesearch number
-
-
-
 :Author:
     Lucas Sawade (lsawade-at-princeton.edu)
 
@@ -26,10 +13,23 @@ from ..functions.linesearch import check_optvals
 
 
 def bin():
+    """
+    Exectuable that checks teh optimization parameters on whether further iteration
+    or linesearch is necessary.
+
+    Usage:
+        ioi-check-optvals <optdir> <it> <ls>
+                    
+    where:
+        optdir   - directory containing the optimization parameters
+        it       - iteration number
+        ls       - linesearch number
+
+    """
 
     if len(argv) != 1+3:
         print("Note enough or too few input parameters.")
-        print(__doc__)
+        print(bin.__doc__)
         exit()
 
     # Get command line arguments

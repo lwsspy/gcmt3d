@@ -1,16 +1,5 @@
 """
 
-Usage: 
-
-    gcmt3d-check-events <path/to/input.yml>
-
-This script calls a python function that checks the events statuses and updates
-the statuses in the event status dir.
-
-Should be run after gcmt3d-create-event-dir
-
---- 
-
 :Author:
     Lucas Sawade (lsawade-at-princeton.edu)
 
@@ -24,10 +13,19 @@ from ..functions.events import check_events
 
 
 def bin():
+    """
 
+    Usage:
+
+        gcmt3d-check-events-todownload <path/to/input.yml>
+
+    Note that the input.yml contains the grander event status directory. The 
+    check-events-todownload will go through all of them to see whats missing.
+
+    """
     # Get args or print usage statement
     if (len(argv) == 1) or (len(argv) > 4):
-        print(__doc__)
+        print(bin.__doc__)
         exit()
     elif (argv[1] == '-h') or (argv[1] == '--help'):
         print(__doc__)

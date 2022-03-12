@@ -1,18 +1,4 @@
 """
-
-Usage: 
-
-    gcmt3d-check-events-todo <path/to/input.yml>
-
-This script calls a python function that adds events to an existing event status
-directory. It checks whether events have already been added before,
-
-where path to 'event_status' and 'label' are found in the 'input.yml'.
-
-After initialization.
-
---- 
-
 :Author:
     Lucas Sawade (lsawade-at-princeton.edu)
 
@@ -28,9 +14,24 @@ from ..functions.events import check_events_todo
 
 def bin():
 
+    """
+
+    Usage:
+
+        gcmt3d-check-events-todo <path/to/input.yml>
+
+    This script calls a python function that adds events to an existing event status
+    directory. It checks whether events have already been added before,
+
+    where path to 'event_status' and 'label' are found in the 'input.yml'.
+
+    After initialization.
+
+    """
+
     # Get args or print usage statement
     if (len(argv) != 2) or (argv[1] == '-h') or (argv[1] == '--help'):
-        print(__doc__)
+        print(bin.__doc__)
         exit()
     else:
         inputfile = argv[1]
