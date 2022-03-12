@@ -43,4 +43,4 @@ def bin():
         it, ls = int(argv[2]), int(argv[3])
 
     # Print cmtsolution
-    get_cmt(outdir, it=it, ls=ls)
+    print(get_cmt(outdir, it=it, ls=ls))
