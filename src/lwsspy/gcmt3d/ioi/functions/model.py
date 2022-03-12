@@ -78,7 +78,8 @@ def get_cmt(
         setattr(cmtsource, _mname, _m)
 
     # Update half-duration afterwards.
-    cmtsource.update_hdur()
+    if it != 0 or it != 0:
+        cmtsource.update_hdur()
 
     # Write CMTSOLUTION to oufile
     if outfile:
