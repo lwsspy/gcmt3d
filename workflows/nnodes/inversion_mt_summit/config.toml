@@ -14,7 +14,7 @@ task_nnodes = 1
 inputfile = "/ccs/home/lsawade/events/gcmt3d/input.yml"
 max_events = 1
 eventid = "C051200C"
-root.nproc = 42
+nproc = 42
 
 
 [root.specfem]
