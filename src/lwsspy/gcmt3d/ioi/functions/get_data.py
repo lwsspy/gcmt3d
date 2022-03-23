@@ -59,7 +59,9 @@ def get_data(outdir: str):
     download_waveforms_to_storage(
         outdir, starttime=starttime, endtime=endtime,
         waveform_storage=waveformdir, station_storage=stationdir,
-        logfile=os.path.join(outdir, 'download-log.txt'), **download_dict)
+        logfile=os.path.join(outdir, 'download-log.txt'),
+        download_chunk_size_in_mb=100, threads_per_client=1,
+        **download_dict)
 
     # Check whether download can be called successful
     if (len(os.listdir(waveformdir)) <= 30) \
