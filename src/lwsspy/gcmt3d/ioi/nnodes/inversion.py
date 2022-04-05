@@ -1,7 +1,5 @@
 # %%
 import os
-from socket import timeout
-from attr import has
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
 from lwsspy.gcmt3d.ioi.functions.get_data import stage_data
