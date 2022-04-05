@@ -1,10 +1,10 @@
 [job]
 system = ["nnodes.job", "Summit"]
 name = "cmtinversion"
-nnodes = 10
+nnodes = 70
 account = "GEO111"
-walltime = 60.0
-gap = 5.0
+walltime = 120.0
+gap = 15.0
 debug = true
 node_splittable = false
 
@@ -12,8 +12,8 @@ node_splittable = false
 task = ["lwsspy.gcmt3d.ioi.nnodes.inversion", "main"]
 task_nnodes = 1
 inputfile = "/ccs/home/lsawade/events/gcmt3d/input.yml"
-max_events = 1
-eventid = "C051200C"
+#max_events = 1
+#eventid = "C051200C"
 nproc = 42
 
 

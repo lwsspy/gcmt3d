@@ -1,10 +1,12 @@
 #!/bin/bash
 #BSUB -J inversion
-#BSUB -W 1:00
-#BSUB -nnodes 10
+#BSUB -W 2:00
+#BSUB -nnodes 70
 #BSUB -o inversion.o
 #BSUB -P GEO111
-#BSUB -q debug
+#BSUB -B
+#BSUB -Ne
+# # #BSUB -q debug
 #BSUB -alloc_flags "gpumps"
 
 
