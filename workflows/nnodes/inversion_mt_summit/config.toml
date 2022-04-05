@@ -12,7 +12,7 @@ node_splittable = false
 task = ["lwsspy.gcmt3d.ioi.nnodes.inversion", "main"]
 task_nnodes = 1
 inputfile = "/ccs/home/lsawade/events/gcmt3d/input.yml"
-#max_events = 1
+max_events = 7
 #eventid = "C051200C"
 nproc = 42
 
@@ -20,3 +20,4 @@ nproc = 42
 [root.specfem]
 mpis = 24
 gpus = 0.25
+timeout = 1200 # in seconds 
