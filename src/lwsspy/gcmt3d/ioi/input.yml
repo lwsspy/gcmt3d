@@ -32,6 +32,7 @@ endtime_offset: 120.0
 merge_windows: True
 normalize: True
 weighting: True
+max_weight_ratio: 5.0
 component_weights:
   R: 1.0
   T: 1.0

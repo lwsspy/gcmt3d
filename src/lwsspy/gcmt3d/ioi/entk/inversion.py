@@ -34,6 +34,8 @@ class EventConfig:
     NM: int
 
 # ----------------------------- MAIN NODE -------------------------------------
+
+
 def generate_pipelines(jobconfigfile: str):
 
     # Reading the config
@@ -67,7 +69,7 @@ def generate_pipelines(jobconfigfile: str):
 
         # Check whether multiple eventids are requested
         if isinstance(cfg['root']['eventid'], list):
-            eventids =  cfg['root']['eventid']
+            eventids = cfg['root']['eventid']
         else:
             eventids = [cfg['root']['eventid']]
 
@@ -87,7 +89,7 @@ def generate_pipelines(jobconfigfile: str):
     if len(eventfiles) < 11:
         for _ev in eventfiles:
             print(_ev)
-    
+
     # Get simpars and NM
     simpars = get_simpars_from_input(inputfile)
     NM = get_NM_from_input(inputfile)
@@ -110,14 +112,13 @@ def generate_pipelines(jobconfigfile: str):
         E.simpars = simpars
         E.NM = NM
 
-
         pipelines.append(cmtinversion(E))
 
-    
+
 # -----------------------------------------------------------------------------
 
 
-# ---------------------------- CMTINVERSION ----------------------------------- 
+# ---------------------------- CMTINVERSION -----------------------------------
 
 # Performs inversion for a single event
 def cmtinversion(E: EventConfig):
@@ -126,7 +127,7 @@ def cmtinversion(E: EventConfig):
     # access!
     p = Pipeline()
     p.__setattr__('eventdir', E.outdir)
-    
+
     try:
         # Will fail if ITER.txt does not exist
         firstiterflag = get_iter(E.outdir) == 0
@@ -137,7 +138,7 @@ def cmtinversion(E: EventConfig):
     if firstiterflag:
         # Before computing a descent direction
         p.add_stages(preinv_stages(E))
-    
+
     # node.write(20 * "=", mode='a')
     iteration(E, p)
 
@@ -150,7 +151,7 @@ def preinv_stages(E: EventConfig) -> tp.List[Stage]:
 
     # Create the inversion directory/make sure all things are in place
     stages.append(createdirs(E))
-    
+
     # Forward and frechet modeling
     stages.append(forwardfrechet(E))
 
@@ -170,7 +171,7 @@ def preinv_stages(E: EventConfig) -> tp.List[Stage]:
 
 
 # Performs iteration
-def iteration(E: EventConfig, p: Pipeline):
+def iteration(E: EventConfig, p: Pipeline) -> None:
 
     # Initialize empty stages
     stages = []
@@ -188,7 +189,7 @@ def iteration(E: EventConfig, p: Pipeline):
     linesearch(E, p)
 
 
-def linesearch(E: EventConfig, p: Pipeline) -> tp.List[Stage]:
+def linesearch(E: EventConfig, p: Pipeline) -> None:
 
     def check_step_and_iter():
 
@@ -235,7 +236,7 @@ def linesearch(E: EventConfig, p: Pipeline) -> tp.List[Stage]:
 def compute_new_model(E: EventConfig):
 
     # Create Dirs Task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Compute-New-Model"
     T.pre_exec = [
         E.conda_init,
@@ -251,18 +252,19 @@ def compute_new_model(E: EventConfig):
 
     return S
 
+
 # -------- PREINV -------------------------------------------------------------
-def createdirs(E: EventConfig):
+def createdirs(E: EventConfig) -> Stage:
 
     # Create Dirs Task
-    T = Task() 
-    T.name = f"{E.name}-T-CreateDirs"
+    T = Task()
+    T.name = f"{E.name}.T.CreateDirs"
     T.executable = 'gcmt3d-create-inv-dir'
-    T.arguments = [f'{E.file}', f'{E.input}'] 
+    T.arguments = [f'{E.file}', f'{E.input}']
     T.pre_exec = [
         E.conda_init
     ]
-    
+
     # Create Stage
     S = Stage()
     S.name = f"{E.name}-S-CreateDirs"
@@ -275,7 +277,7 @@ def forwardfrechet(E: EventConfig) -> Stage:
 
     # Create Stage
     S = Stage()
-    S.name = f"{E.name}-S-ForwardFrechet"
+    S.name = f"{E.name}.S.ForwardFrechet"
     S.add_tasks(forward(E))
 
     S.add_tasks(frechet(E))
@@ -284,10 +286,10 @@ def forwardfrechet(E: EventConfig) -> Stage:
 
 
 def forward(E: EventConfig) -> tp.List[Task]:
-  
+
     # Create forward modelling task
-    T = Task() 
-    T.name = f"{E.name}-T-Forward"
+    T = Task()
+    T.name = f"{E.name}.T.Forward"
     T.executable = 'bin/xspecfem3D'
     T.sandbox = os.path.join(E.outdir, 'simu', 'synt')
     T.pre_exec = [
@@ -295,9 +297,11 @@ def forward(E: EventConfig) -> tp.List[Task]:
         f'module load {E.specfemp["modules"]}',
         'gcmt3d-update-cmt-synt'
     ]
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=E.specfemp['mpis'], cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
-    T.task.gpu_reqs = dict(cpu_processes=E.specfemp['mpis'], cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=E.specfemp['mpis'], cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+    T.task.gpu_reqs = dict(
+        gpu_processes=1, gpu_process_type=None,  gpu_threads=1, gpu_thread_type='CUDA')
 
     return [T]
 
@@ -308,20 +312,23 @@ def frechet(E: EventConfig) -> tp.List[Task]:
     t = []
 
     for _i in E.simpars:
-        
+
         # Create frechet derivative task depending on the parameters to download.
-        T = Task() 
-        T.name = f"{E.name}-T-Frechet-dsdm{_i:05d}"
+        T = Task()
+        T.name = f"{E.name}.T.Frechet.dsdm{_i:05d}"
         T.executable = 'bin/xspecfem3D'
-        T.sandbox = os.path.join(E.outdir, 'simu', 'simu', 'dsdm', f'dsdm{_i:05d}')
+        T.sandbox = os.path.join(
+            E.outdir, 'simu', 'simu', 'dsdm', f'dsdm{_i:05d}')
         T.pre_exec = [
             E.conda_init,
             f'module load {E.specfemp["modules"]}',
             'gcmt3d-update-cmt-dsdm'
         ]
-        # Same number of CPUs and GPUs 
-        T.task.cpu_reqs = dict(cpu_processes=E.specfemp['mpis'], cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
-        T.task.gpu_reqs = dict(cpu_processes=E.specfemp['mpis'], cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+        # Same number of CPUs and GPUs
+        T.task.cpu_reqs = dict(
+            cpu_processes=E.specfemp['mpis'], cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+        T.task.gpu_reqs = dict(
+            gpu_processes=1, gpu_process_type=None,  gpu_threads=1, gpu_thread_type='CUDA')
 
         t.append(T)
 
@@ -362,15 +369,16 @@ def process_all_synt(E: EventConfig) -> Stage:
 
 
 def process_data(E: EventConfig) -> tp.List[Task]:
-    
+
     # Create forward modelling task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Process-Data"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-process-data'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
 
     return [T]
 
@@ -378,46 +386,49 @@ def process_data(E: EventConfig) -> tp.List[Task]:
 def process_synt(E: EventConfig) -> tp.List[Task]:
 
     # Create forward modelling task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Process-Synt"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-process-synt'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
 
     return [T]
 
 
 def process_dsdm(E: EventConfig) -> tp.List[Task]:
-    
+
     # Empty Task list
     t = []
 
     # Create forward modelling task
     for _i in range(E.NM):
-        T = Task() 
+        T = Task()
         T.name = f"{E.name}-T-Process-DSDM-process-dsdm{_i:05d}"
         T.pre_exec = [E.conda_init]
         T.executable = 'gcmt3d-process-synt'
         T.arguments = [f'{E.outdir}', f'_i']
-        # Same number of CPUs and GPUs 
-        T.task.cpu_reqs = dict(cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+        # Same number of CPUs and GPUs
+        T.task.cpu_reqs = dict(
+            cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
 
         t.append(T)
     return t
 
 
 def window(E: EventConfig) -> Stage:
-    
+
     # Create forward modelling task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Window-Data"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-window'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
 
     # Create Stage
     S = Stage()
@@ -429,13 +440,14 @@ def window(E: EventConfig) -> Stage:
 def weights(E: EventConfig) -> Stage:
 
     # Create task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Compute-weights"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-compute-weights'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=30, cpu_process_type='MPI', cpu_threads=1, cpu_thread_type=None)
 
     # Create Stage
     S = Stage()
@@ -458,44 +470,49 @@ def cgh(E: EventConfig) -> Stage:
 
     # Hessian
     S.add_tasks(compute_hessian(E))
-    
+
     return S
 
 
 def compute_cost(E: EventConfig) -> tp.List[Task]:
     # Create compte cost task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Compute-Cost"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-compute-cost'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
 
     return [T]
 
+
 def compute_gradient(E: EventConfig) -> tp.List[Task]:
     # Create compte cost task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Compute-Gradient"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-compute-gradient'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
 
     return [T]
 
+
 def compute_hessian(E: EventConfig) -> tp.List[Task]:
-    
+
     # Create compte cost task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Compute-Hessian"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-compute-hessian'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
 
     S.add_tasks([T])
 
@@ -514,15 +531,16 @@ def descent(E: EventConfig) -> Stage:
 
 
 def compute_descent(E: EventConfig) -> tp.List[Task]:
-    
+
     # Create compute cost task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Compute-Descent"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-compute-descent'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
 
     return [T]
 
@@ -530,13 +548,14 @@ def compute_descent(E: EventConfig) -> tp.List[Task]:
 def compute_optvals(E: EventConfig) -> Stage:
 
     # Create compute cost task
-    T = Task() 
+    T = Task()
     T.name = f"{E.name}-T-Compute-Descent"
     T.pre_exec = [E.conda_init]
     T.executable = 'gcmt3d-compute-descent'
     T.arguments = [f'{E.outdir}']
-    # Same number of CPUs and GPUs 
-    T.task.cpu_reqs = dict(cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
+    # Same number of CPUs and GPUs
+    T.task.cpu_reqs = dict(
+        cpu_processes=1, cpu_process_type=None, cpu_threads=1, cpu_thread_type=None)
 
     # Create Stage
     S = Stage()
@@ -544,4 +563,3 @@ def compute_optvals(E: EventConfig) -> Stage:
     S.add_tasks([T])
 
     return S
-

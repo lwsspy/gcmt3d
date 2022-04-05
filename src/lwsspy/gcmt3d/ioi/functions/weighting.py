@@ -22,6 +22,7 @@ def compute_weights(outdir):
     # Get component weighting
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
     weights_rtz = inputparams['component_weights']
+    max_weight_ratio = inputparams['max_ratio']
 
     # Get process parameters
     processparams = read_yaml_file(os.path.join(outdir, 'process.yml'))
@@ -94,7 +95,7 @@ def compute_weights(outdir):
 
                 # Get Geographical weights
                 gw = GeoWeights(latitudes, longitudes)
-                _, _, ref, _ = gw.get_condition(ctype='fracmax', param=0.1)
+                _, _, ref, _ = gw.get_condition(ctype='fracmax', param=0.33)
                 geo_weights = gw.get_weights(ref)
 
                 # Normalize the azimuthal weights
@@ -106,7 +107,21 @@ def compute_weights(outdir):
 
                 # Compute Combination weights.
                 aweights = (aw * geo_weights)
+
+                # Now fix the maximum ratio between the weights to the
+                # max_ratio from the parameter file. For corner cases, this
+                # is important because it prevents the contribution of
+                # a single station to become too large. [In corner cases
+                # this has happened when geo weights and aziweights do the same
+                # thing.]
+                aweights = (
+                    (max_weight_ratio-1) * (aweights - min(aweights))) / \
+                    (max(aweights) - min(aweights)) + 1
+
+                # Normalize by the mean
                 aweights /= np.sum(aweights)/len(aweights)
+
+                # Add weights
                 weights[_wtype][_component]["combination"] = deepcopy(
                     aweights)
 

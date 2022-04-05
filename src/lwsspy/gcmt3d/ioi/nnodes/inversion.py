@@ -1,5 +1,6 @@
 # %%
 import os
+from socket import timeout
 from attr import has
 from nnodes import Node
 from lwsspy.seismo.source import CMTSource
@@ -68,7 +69,7 @@ def main(node: Node):
     if len(eventfiles) < 11:
         for _ev in eventfiles:
             print(_ev)
-    
+
     # Loop over inversions
     for event in eventfiles:
         eventname = CMTSource.from_CMTSOLUTION_file(event).eventname
@@ -81,7 +82,7 @@ def main(node: Node):
 # -----------------------------------------------------------------------------
 
 
-# ---------------------------- CMTINVERSION ----------------------------------- 
+# ---------------------------- CMTINVERSION -----------------------------------
 
 # Performs inversion for a single event
 def cmtinversion(node: Node):
@@ -111,7 +112,8 @@ def iteration(node: Node):
         node.add(forward_frechet, concurrent=True)
 
         # Process the data and the synthetics
-        node.add(process_all, concurrent=True, name='processing-all', cwd=node.log)
+        node.add(process_all, concurrent=True,
+                 name='processing-all', cwd=node.log)
 
         # Windowing
         node.add_mpi(window, 1, (10, 0), arg=(node.outdir), cwd=node.log)
@@ -143,7 +145,8 @@ def search_step(node):
     update_step(node.outdir)
     node.add(compute_new_model)
     node.add(forward_frechet, concurrent=True, outdir=node.outdir)
-    node.add(process_synthetics, concurrent=True, name='processing-synthetics', cwd='./logs')
+    node.add(process_synthetics, concurrent=True,
+             name='processing-synthetics', cwd='./logs')
     node.add(compute_cgh, concurrent=True)
     node.add(compute_descent)
     node.add(compute_optvals)
@@ -151,6 +154,16 @@ def search_step(node):
 
 
 # ----------------------------- AUXILIARY NODES -------------------------------
+
+#  add_mpi(self, cmd: tp.Union[str, tp.Callable], /,
+#         nprocs: tp.Union[int, tp.Callable[[Directory], int]] = 1,
+#         cpus_per_proc: int = 1, gpus_per_proc: int = 0, mps: tp.Optional[int] = None, *,
+#         name: tp.Optional[str] = None, arg: tp.Any = None, arg_mpi: tp.Optional[list] = None,
+#         check_output: tp.Optional[tp.Callable[[str], None]] = None, use_multiprocessing: tp.Optional[bool] = None,
+#         cwd: tp.Optional[str] = None, data: tp.Optional[dict] = None,
+#         timeout: tp.Union[tp.Literal['auto'], float, None] = 'auto',
+#         ontimeout: tp.Union[tp.Literal['raise'], tp.Callable[[], None], None] = 'raise'):
+
 
 # -------------------
 # Forward Computation
@@ -163,8 +176,13 @@ def forward_frechet(node):
 def forward(node):
     # setup
     update_cmt_synt(node.outdir)
-    node.add_mpi('bin/xspecfem3D', node.specfem['mpis'], (1, node.specfem['gpus']),
-                 cwd=os.path.join(node.outdir, 'simu', 'synt'))
+    node.add_mpi(
+        'bin/xspecfem3D',
+        nprocs=node.specfem['mpis'],
+        cpus_per_proc=1,
+        gpus_per_proc=node.specfem['gpus'],
+        timeout=node.specfem['timeout'],
+        cwd=os.path.join(node.outdir, 'simu', 'synt'))
 
 
 # Frechet derivatives
@@ -175,16 +193,23 @@ def frechet(node):
     # Process the frechet derivatives
     simpars = get_simpars(node.outdir)
     for _i in simpars:
-        node.add_mpi('bin/xspecfem3D', node.specfem['mpis'], (1, node.specfem['gpus']),
-                     cwd=os.path.join(node.outdir, 'simu', 'dsdm', f'dsdm{_i:05d}'))
+        node.add_mpi(
+            'bin/xspecfem3D',
+            nprocs=node.specfem['mpis'],
+            cpus_per_proc=1,
+            gpus_per_proc=node.specfem['gpus'],
+            timeout=node.specfem['timeout'],
+            cwd=os.path.join(node.outdir, 'simu', 'dsdm', f'dsdm{_i:05d}'))
 
 
 # ----------
 # Processing
 def process_all(node):
 
-    node.add_mpi(process_data, 1, (10, 0), arg=(
-        node.outdir), name=node.eventname + '_process_data', cwd=node.log)
+    node.add_mpi(
+        process_data, arg=(node.outdir),
+        nprocs=1, cpus_per_proc=10,
+        name=node.eventname + '_process_data', cwd=node.log)
     node.add(process_synthetics, concurrent=True)
 
 
@@ -192,24 +217,28 @@ def process_all(node):
 def process_synthetics(node):
 
     # Process the normal synthetics
-    node.add_mpi(process_synt, 1, (10, 0),
-                 arg=(node.outdir),
-                 name=node.eventname + '_process_synt',
-                 cwd=node.log)
+    node.add_mpi(
+        process_synt, arg=(node.outdir),
+        nprocs=1, cpus_per_proc=10,
+        name=node.eventname + '_process_synt',
+        cwd=node.log)
 
     # Process the frechet derivatives
     NM = len(read_model_names(node.outdir))
     for _i in range(NM):
         print(node.outdir, 'simpar', _i)
-        node.add_mpi(wprocess_dsdm, 1, (10, 0),
-                     arg=(node.outdir, _i),
-                     name=node.eventname + f'_process_dsdm{_i:05d}',
-                     cwd=node.log)
+        node.add_mpi(
+            wprocess_dsdm, arg=(node.outdir, _i),
+            nprocs=1, cpus_per_proc=10,
+            name=node.eventname + f'_process_dsdm{_i:05d}',
+            cwd=node.log)
 
 # ------------------
 # Updating the model
 
 # update linesearch
+
+
 def compute_new_model(node):
     update_model(node.outdir)
 
@@ -217,7 +246,8 @@ def compute_new_model(node):
 # Transer to next iteration
 def transfer_mcgh(node):
     node.add_mpi(
-        update_mcgh, 1, (4, 0), arg=(node.outdir),
+        update_mcgh, arg=(node.outdir),
+        nprocs=1, cpus_per_proc=4,
         name=f"mpi-transfer-mcgh-{node.eventname}",
         cwd=node.log)
 
@@ -226,7 +256,8 @@ def transfer_mcgh(node):
 # Pre-inversion
 def compute_weights(node):
     node.add_mpi(
-        compute_weights_func, 1, (4, 0), arg=(node.outdir),
+        compute_weights_func,  arg=(node.outdir),
+        nprocs=1, cpus_per_proc=4,
         name=f"mpi-compute-weights-{node.eventname}",
         cwd=node.log)
 
@@ -242,7 +273,8 @@ def compute_cgh(node):
 # Cost
 def compute_cost(node):
     node.add_mpi(
-        cost, 1, (4, 0), arg=(node.outdir),
+        cost, arg=(node.outdir),
+        nprocs=1, cpus_per_proc=4,
         name=f"mpi-compute-cost-{node.eventname}",
         cwd=node.log)
 
@@ -250,7 +282,7 @@ def compute_cost(node):
 # Gradient
 def compute_gradient(node):
     node.add_mpi(
-        gradient, 1, (4, 0), arg=(node.outdir),
+        gradient, arg=(node.outdir), nprocs=1, cpus_per_proc=4,
         name=f"mpi-compute-grad-{node.eventname}",
         cwd=node.log)
 
@@ -258,7 +290,7 @@ def compute_gradient(node):
 # Hessian
 def compute_hessian(node):
     node.add_mpi(
-        hessian, 1, (4, 0), arg=(node.outdir),
+        hessian, arg=(node.outdir),  nprocs=1, cpus_per_proc=4,
         name=f"mpi-compute-hess-{node.eventname}",
         cwd=node.log)
 
@@ -266,21 +298,20 @@ def compute_hessian(node):
 # Descent
 def compute_descent(node):
     node.add_mpi(
-        descent, 1, (4, 0), arg=(node.outdir),
+        descent, arg=(node.outdir), nprocs=1, cpus_per_proc=4,
         name=f"mpi-compute-descent-{node.eventname}",
         cwd=node.log)
 
-
 # ----------
 # Linesearch
+
+
 def compute_optvals(node):
     get_optvals(node.outdir)
 
-
-# ----------------
-# Inversion checks
-
 # Check whether to add another iteration
+
+
 def iteration_check(node):
 
     flag = check_optvals(node.outdir, status=False)

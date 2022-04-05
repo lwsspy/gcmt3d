@@ -60,7 +60,7 @@ def get_cmt(
     # Get iter,step
     if it is None:
         it = get_iter(outdir)
-    
+
     # Get dirs
     metadir = os.path.join(outdir, 'meta')
 

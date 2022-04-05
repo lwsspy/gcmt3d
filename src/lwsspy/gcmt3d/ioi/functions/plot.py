@@ -14,6 +14,7 @@ from pandas import period_range
 from .utils import read_pickle
 from .data import read_data_windowed
 from .forward import read_synt
+from .model import get_cmt
 # def cgh(costdir, gradir, hessdir, it, ls=None):
 #     c = read_cost(costdir, it, ls)
 #     g = read_gradient(graddir, it, ls)
@@ -24,10 +25,8 @@ from .forward import read_synt
 
 def plot_stream_pdf(outdir, outfile, it=0, ls=0, wavetype='mantle'):
 
-    # CMT source
-    cmtsource = CMTSource.from_CMTSOLUTION_file(
-        os.path.join(outdir, 'meta', 'init_model.cmt')
-    )
+    # Get initial CMT source
+    initcmt = get_cmt(outdir, it=0, ls=0)
 
     # Read data
     data = read_data_windowed(outdir, wavetype)
@@ -37,8 +36,10 @@ def plot_stream_pdf(outdir, outfile, it=0, ls=0, wavetype='mantle'):
 
     # Get new synthetics
     if (it != 0) or (ls != 0):
+        cmt = get_cmt(outdir, it, ls)
         newsynt = read_synt(outdir, wavetype, it, ls)
     else:
+        cmt = None
         newsynt = None
 
     # Get stations
@@ -80,11 +81,21 @@ def plot_stream_pdf(outdir, outfile, it=0, ls=0, wavetype='mantle'):
 
                 fig, _ = plot_seismogram_by_station(
                     _network, _station,
-                    obsd=data, synt=init_synt, newsynt=newsynt,
-                    cmtsource=cmtsource,
-                    annotations=True, windows=True,
-                    # annotations=True, windows=True,
-                    periodrange=periodrange[0:4:3][::-1])
+                    obsd=data,
+                    synt=init_synt,
+                    newsynt=newsynt,
+                    obsdcmt=initcmt,
+                    newsyntcmt=cmt,
+                    timescale=3600.0,
+                    windows=True,
+                    annotations=True,
+                    plot_beach=True,
+                    map=True,
+                    midpointmap=False,
+                    pdfmode=True,
+                    periodrange=periodrange[0:4:3][::-1]
+                    #     xlim_in_seconds=[40*60,55*60],
+                )
 
                 pdf.savefig()  # saves the current figure into a pdf page
                 plt.close(fig)
