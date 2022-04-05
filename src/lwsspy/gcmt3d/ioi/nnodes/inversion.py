@@ -34,7 +34,7 @@ def main(node: Node):
 
     # Maximum download flag
     maxflag = True if node.max_events != 0 else False
-    print('Maximum # of events?', eventflag)
+    print('Maximum # of events?', maxflag)
 
     # If eventid in files only use the ids
     if eventflag:
@@ -102,7 +102,8 @@ def iteration(node: Node):
 
         # Create the inversion directory/makesure all things are in place
         node.add_mpi(
-            wcreate_forward_dirs, 1, (4, 0), arg=(node.event, node.inputfile),
+            wcreate_forward_dirs, arg=(node.event, node.inputfile),
+            nprocs=1, cpus_per_proc=4,
             name=f"mpi-create-dir-{node.eventname}",
             cwd=node.log)
 
@@ -114,7 +115,10 @@ def iteration(node: Node):
                  name='processing-all', cwd=node.log)
 
         # Windowing
-        node.add_mpi(window, 1, (10, 0), arg=(node.outdir), cwd=node.log)
+        node.add_mpi(
+            window, arg=(node.outdir),
+            nprocs=1, cpus_per_proc=10,
+            cwd=node.log)
 
         # Weighting
         node.add(compute_weights)
