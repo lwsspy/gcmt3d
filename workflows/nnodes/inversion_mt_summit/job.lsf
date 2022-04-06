@@ -26,7 +26,7 @@ export OMP_NUM_THREADS=1
 
 # Print start banner
 for i in {1..3}; do printf '+%.0s' {1..100}; printf '\n'; done
-printf '+%.0s' {1..35}; printf ' %28s ' "$(date)"; printf '+%.0s' {1..35};
+printf '+%.0s' {1..35}; printf ' %28s ' "$(date)"; printf '+%.0s' {1..35}; printf '\n';
 for i in {1..3}; do printf '+%.0s' {1..100}; printf '\n'; done
 
 # Get start duration counter
@@ -41,5 +41,5 @@ echo "$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed."
 
 # Print post run banner
 for i in {1..1}; do printf '=%.0s' {1..100}; printf '\n'; done
-printf '=%.0s' {1..35}; printf ' %28s ' "$(date)"; printf '=%.0s' {1..35};
+printf '=%.0s' {1..35}; printf ' %28s ' "$(date)"; printf '=%.0s' {1..35}; printf '\n';
 for i in {1..1}; do printf '=%.0s' {1..100}; printf '\n'; done
