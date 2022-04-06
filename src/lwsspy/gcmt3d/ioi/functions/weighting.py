@@ -22,7 +22,7 @@ def compute_weights(outdir):
     # Get component weighting
     inputparams = read_yaml_file(os.path.join(outdir, 'input.yml'))
     weights_rtz = inputparams['component_weights']
-    max_weight_ratio = inputparams['max_ratio']
+    max_weight_ratio = inputparams['max_weight_ratio']
 
     # Get process parameters
     processparams = read_yaml_file(os.path.join(outdir, 'process.yml'))
