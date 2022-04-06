@@ -183,6 +183,7 @@ def forward(node):
         nprocs=node.specfem['mpis'],
         cpus_per_proc=1,
         gpus_per_proc=node.specfem['gpus'],
+        mps=node.specfem['mps'],
         timeout=node.specfem['timeout'],
         cwd=os.path.join(node.outdir, 'simu', 'synt'))
 
@@ -200,6 +201,7 @@ def frechet(node):
             nprocs=node.specfem['mpis'],
             cpus_per_proc=1,
             gpus_per_proc=node.specfem['gpus'],
+            mps=node.specfem['mps'],
             timeout=node.specfem['timeout'],
             cwd=os.path.join(node.outdir, 'simu', 'dsdm', f'dsdm{_i:05d}'))
 
