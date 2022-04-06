@@ -19,5 +19,6 @@ nproc = 20
 
 [root.specfem]
 mpis = 24
-gpus = 0.25
+gpus = 1
+mps = 4
 timeout = 1200 # in seconds 
